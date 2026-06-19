@@ -1,0 +1,158 @@
+# FamChat
+
+FamChat is a private, WhatsApp-style messaging PWA for one family. It runs entirely in the browser with no server to host — just a Firebase Realtime Database your family shares.
+
+---
+
+## What you need before starting
+
+- A Google account (for Firebase)
+- 10 minutes
+- The URL where you'll host FamChat (GitHub Pages is easiest — see below)
+
+---
+
+## Step 1 — Create a Firebase project
+
+1. Go to [https://console.firebase.google.com](https://console.firebase.google.com) and sign in.
+2. Click **Add project**.
+3. Enter a project name (e.g. `famchat-smith`) and click **Continue**.
+4. Disable Google Analytics (not needed) and click **Create project**.
+5. Wait for the project to provision, then click **Continue**.
+
+---
+
+## Step 2 — Create a Realtime Database
+
+1. In the left sidebar, find **Build** → **Realtime Database** and click it.
+2. Click **Create Database**.
+3. Choose a region close to your family (e.g. Singapore → `asia-southeast1`).
+4. When asked about security rules, select **Start in test mode** — you'll replace these in Step 4.
+5. Click **Enable**.
+
+---
+
+## Step 3 — Get your Firebase config
+
+1. In the left sidebar, click the ⚙️ gear icon next to **Project Overview**, then **Project settings**.
+2. Scroll down to **Your apps** and click the **</>** (Web) icon to register a web app.
+3. Enter a nickname (e.g. `FamChat`) and click **Register app**.
+4. Firebase shows a `firebaseConfig` object. It looks like this:
+
+```json
+{
+  "apiKey": "AIzaSyABCDEF...",
+  "authDomain": "famchat-smith.firebaseapp.com",
+  "databaseURL": "https://famchat-smith-default-rtdb.asia-southeast1.firebasedatabase.app",
+  "projectId": "famchat-smith",
+  "storageBucket": "famchat-smith.appspot.com",
+  "messagingSenderId": "123456789012",
+  "appId": "1:123456789012:web:abcdef012345"
+}
+```
+
+5. Copy the entire object (just the `{...}` part, not `const firebaseConfig =`).
+6. You'll paste this into FamChat when it asks on first launch.
+
+> **Keep this config private.** Don't post it in a public GitHub repo or share it in a public forum. Anyone with your `databaseURL` and `apiKey` can read your messages if the security rules are open.
+
+---
+
+## Step 4 — Set Firebase security rules
+
+In your Firebase console → Realtime Database → **Rules** tab, replace the rules with:
+
+```json
+{
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}
+```
+
+Click **Publish**.
+
+**Why these open rules are safe for a family app:** your Firebase config is never published publicly (it stays in each family member's browser localStorage), so only people you personally share the app URL with can ever reach your database. These rules are perfectly fine for a private family use case.
+
+For stronger security later, see [Firebase Authentication docs](https://firebase.google.com/docs/auth) to restrict reads/writes to authenticated users only.
+
+---
+
+## Step 5 — Deploy to GitHub Pages
+
+1. Create a new **private** repository on GitHub (e.g. `famchat`).
+2. Upload these 4 files to the root of the repo:
+   - `index.html`
+   - `sw.js`
+   - `manifest.json`
+   - `README.md`
+3. Go to **Settings** → **Pages** → set Source to **Deploy from a branch** → branch `main` / folder `/(root)` → **Save**.
+4. GitHub gives you a URL like `https://yourusername.github.io/famchat/`.
+
+That's your family's private chat URL. Share it only with family members.
+
+---
+
+## Step 6 — How family members join
+
+Each person follows these steps **on their own device**:
+
+1. Open the URL (e.g. `https://yourusername.github.io/famchat/`).
+2. **Firebase Setup screen:** paste the Firebase config object your family is using. Tap **Connect & Save**. This is a one-time step — the config is stored in the browser.
+3. **Profile Setup screen:** enter your name, pick an emoji and a colour, tap **Let's go →**.
+4. You're in. You'll appear in everyone else's Family chat list within a few seconds.
+
+To install FamChat as an app on your phone: open the URL in Chrome (Android) or Safari (iOS) and use **Add to Home Screen** from the browser menu.
+
+---
+
+## Troubleshooting
+
+### Messages aren't appearing for other family members
+
+- Check that everyone has the same `databaseURL` in their Firebase config. Even a small difference means they're connecting to different databases.
+- Check your Firebase security rules are published (Step 4 above).
+- Open the Firebase console → Realtime Database → **Data** tab and see if messages are appearing there. If they are, the issue is on the receiving side.
+
+### "Connection failed: Timed out" on setup
+
+- Double-check your `databaseURL` — it usually ends in `.firebasedatabase.app` or `.firebaseio.com`.
+- Make sure you've enabled the **Realtime Database** (not Firestore) in your Firebase project.
+- Try opening the URL in a private/incognito window to rule out browser extension interference.
+
+### The app doesn't load offline
+
+- The app shell caches on **second visit** after the service worker installs. Visit the URL once while online, then try again.
+- iOS Safari sometimes delays service worker activation — close and reopen the tab.
+
+### I need to reset my profile
+
+- Go to **Settings** (gear icon on the home screen) → **Reset app**.
+- This clears your local data and returns to the Firebase setup screen. Your messages remain in Firebase.
+
+### Timestamps show the wrong time zone
+
+- FamChat uses `en-SG` locale for timestamp display. All messages are stored as UTC milliseconds — the display time is always in your local device time zone.
+
+### Notifications aren't showing
+
+- When you created your profile, FamChat asked for notification permission. If you denied it, go to your browser settings → site permissions → allow notifications for this site.
+- Notifications only fire when the browser tab is not currently visible.
+
+### A member appears as "Unknown" or with the wrong name/emoji
+
+- Their app may not have synced to Firebase yet. Pull-to-refresh on the home list, or ask them to open the app.
+- If they changed their profile in Settings, the change propagates within a few seconds.
+
+---
+
+## Data and privacy
+
+- All messages are stored in **your own Firebase project** — Anthropic and the FamChat developer have no access.
+- Message data is never deleted by the app itself. To delete messages, go to Firebase console → Realtime Database → Data and delete nodes manually.
+- Local message cache older than 30 days is pruned from each device automatically. Firebase retains everything.
+
+---
+
+*FamChat v1.0 — built June 2026*
