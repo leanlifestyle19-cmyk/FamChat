@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#020e1e">
+  <meta name="theme-color" content="#dff4fb">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>FamChat</title>
@@ -13,24 +13,24 @@
        DESIGN TOKENS
     ================================================================ */
     :root {
-      /* Ocean theme — default */
-      --bg:              #020e1e;
-      --surface:         #061b35;
-      --surface-raised:  #0a2a50;
-      --border:          #133d6a;
-      --bubble-other:    #0a2a50;
-      --bubble-other-tx: #d8eaf8;
-      --input-bg:        #061b35;
-      --input-border:    #1a4878;
-      --compose-bg:      #020e1e;
-      --tx-primary:      #e8f3fc;
-      --tx-secondary:    #68afd0;
-      --tx-muted:        #28638a;
-      --online:          #22c55e;
+      /* Ocean theme — default (light) */
+      --bg:              #dff4fb;
+      --surface:         #f0faff;
+      --surface-raised:  #ffffff;
+      --border:          #b3e0f5;
+      --bubble-other:    #e0f2fe;
+      --bubble-other-tx: #0c3d5a;
+      --input-bg:        #f0faff;
+      --input-border:    #7dd3fa;
+      --compose-bg:      #dff4fb;
+      --tx-primary:      #0c3d5a;
+      --tx-secondary:    #0369a1;
+      --tx-muted:        #0891b2;
+      --online:          #16a34a;
       --unread-bg:       #ef4444;
-      --rx-bg:           rgba(255,255,255,0.07);
-      --rx-own-bg:       rgba(255,255,255,0.18);
-      --rx-border:       rgba(255,255,255,0.12);
+      --rx-bg:           rgba(0,0,0,0.06);
+      --rx-own-bg:       rgba(0,0,0,0.13);
+      --rx-border:       rgba(0,0,0,0.10);
       --safe-b:          env(safe-area-inset-bottom, 0px);
     }
 
@@ -56,6 +56,10 @@
       position: fixed; inset: 0;
       display: none; flex-direction: column;
       background: var(--bg);
+      background-image: var(--bg-wave, none);
+      background-position: bottom center;
+      background-size: 100% 38%;
+      background-repeat: no-repeat;
     }
     .screen.active { display: flex; }
     .screen.centered { align-items: center; justify-content: center; overflow-y: auto; padding: 28px 24px; }
@@ -611,7 +615,13 @@
     const TYPING_MS = 3000;
 
     const THEMES = {
-      ocean:  { label:'🌊 Ocean',  bg:'#020e1e', surface:'#061b35', raised:'#0a2a50', border:'#133d6a', txSec:'#68afd0', txMuted:'#28638a', inputBorder:'#1a4878' },
+      ocean:  {
+        label:'🌊 Ocean',
+        bg:'#dff4fb', surface:'#f0faff', raised:'#ffffff', border:'#b3e0f5',
+        txPrimary:'#0c3d5a', txSec:'#0369a1', txMuted:'#0891b2',
+        inputBorder:'#7dd3fa', bubbleOther:'#e0f2fe', bubbleOtherTx:'#0c3d5a',
+        rxBg:'rgba(0,0,0,0.06)', rxOwnBg:'rgba(0,0,0,0.13)', light:true,
+      },
       sunset: { label:'🌅 Sunset', bg:'#180b04', surface:'#2c1408', raised:'#401c0c', border:'#6a2c10', txSec:'#c07858', txMuted:'#7a3820', inputBorder:'#8a3e20' },
       galaxy: { label:'🌌 Galaxy', bg:'#070412', surface:'#0f0922', raised:'#180d36', border:'#2c1a68', txSec:'#8878d0', txMuted:'#3c2898', inputBorder:'#3e2a90' },
       forest: { label:'🌲 Forest', bg:'#030d06', surface:'#07190c', raised:'#0c2a14', border:'#164e20', txSec:'#52a868', txMuted:'#1e6830', inputBorder:'#1e6830' },
@@ -698,19 +708,27 @@
     }
 
     // ── Themes ────────────────────────────────────────────────────
+    // Wave SVG (3-layer ocean wave, encoded for CSS url())
+    const WAVE_URI = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 220' preserveAspectRatio='none'%3E%3Cpath fill='%2338bdf8' fill-opacity='0.45' d='M0,90 C180,50 360,120 540,85 C720,50 900,120 1080,85 C1260,50 1350,95 1440,85 L1440,220 L0,220Z'/%3E%3Cpath fill='%230ea5e9' fill-opacity='0.32' d='M0,120 C180,155 360,95 540,130 C720,165 900,105 1080,130 C1260,155 1350,120 1440,130 L1440,220 L0,220Z'/%3E%3Cpath fill='%230284c7' fill-opacity='0.22' d='M0,155 C180,135 360,165 540,150 C720,135 900,165 1080,150 C1260,135 1350,158 1440,150 L1440,220 L0,220Z'/%3E%3C/svg%3E";
+
     function applyTheme(name) {
       const t = THEMES[name] || THEMES.ocean;
       const r = document.documentElement.style;
-      r.setProperty('--bg',             t.bg);
-      r.setProperty('--surface',        t.surface);
-      r.setProperty('--surface-raised', t.raised);
-      r.setProperty('--bubble-other',   t.raised);
-      r.setProperty('--border',         t.border);
-      r.setProperty('--compose-bg',     t.bg);
-      r.setProperty('--input-bg',       t.surface);
-      r.setProperty('--input-border',   t.inputBorder);
-      r.setProperty('--tx-secondary',   t.txSec);
-      r.setProperty('--tx-muted',       t.txMuted);
+      r.setProperty('--bg',              t.bg);
+      r.setProperty('--surface',         t.surface);
+      r.setProperty('--surface-raised',  t.raised);
+      r.setProperty('--bubble-other',    t.bubbleOther  || t.raised);
+      r.setProperty('--bubble-other-tx', t.bubbleOtherTx || '#dde4ed');
+      r.setProperty('--border',          t.border);
+      r.setProperty('--compose-bg',      t.bg);
+      r.setProperty('--input-bg',        t.surface);
+      r.setProperty('--input-border',    t.inputBorder);
+      r.setProperty('--tx-primary',      t.txPrimary || '#e8f3fc');
+      r.setProperty('--tx-secondary',    t.txSec);
+      r.setProperty('--tx-muted',        t.txMuted);
+      r.setProperty('--rx-bg',           t.rxBg    || 'rgba(255,255,255,0.07)');
+      r.setProperty('--rx-own-bg',       t.rxOwnBg || 'rgba(255,255,255,0.18)');
+      r.setProperty('--bg-wave',         t.light ? `url("${WAVE_URI}")` : 'none');
       const mc = document.querySelector('meta[name="theme-color"]');
       if (mc) mc.content = t.bg;
       localStorage.setItem('fc_theme', name);
