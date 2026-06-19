@@ -442,6 +442,7 @@
   <!-- Firebase SDK (compat v10.12.0) — load before app script -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
   <!-- ═══════════════════════════════════════════════════════
        SCREEN 1 · Firebase Setup
@@ -868,6 +869,9 @@
       if (firebase.apps.length > 0) await firebase.app().delete();
       firebase.initializeApp(cfg);
       fbDb = firebase.database();
+      // Sign in anonymously so security rules (auth != null) pass.
+      // Firebase persists the anonymous session automatically across reloads.
+      await firebase.auth().signInAnonymously();
     }
 
     function testConn() {
