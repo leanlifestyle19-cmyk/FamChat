@@ -1,0 +1,25 @@
+{
+  "name": "FamChat",
+  "short_name": "FamChat",
+  "description": "Private family messaging — just your people.",
+  "theme_color": "#0e1117",
+  "background_color": "#0e1117",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "./",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='38' fill='%230e1117'/%3E%3Cpath d='M34 62C34 44 48 34 62 34H130C146 34 158 46 158 62V110C158 128 144 138 130 138H108L96 156L84 138H62C46 138 34 126 34 110Z' fill='%233b82f6'/%3E%3Cpath d='M96 112C88 104 66 90 66 76C66 67 72 61 80 61C86 61 91 64 96 70C101 64 106 61 112 61C120 61 126 67 126 76C126 90 104 104 96 112Z' fill='white'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230e1117'/%3E%3Cpath d='M90 166C90 118 128 90 166 90H346C390 90 422 122 422 166V294C422 342 384 370 346 370H286L256 416L226 370H166C122 370 90 338 90 294Z' fill='%233b82f6'/%3E%3Cpath d='M256 298C240 278 176 242 176 204C176 180 192 164 214 164C230 164 244 172 256 188C268 172 282 164 298 164C320 164 336 180 336 204C336 242 272 278 256 298Z' fill='white'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
