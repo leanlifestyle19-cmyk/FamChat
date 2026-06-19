@@ -58,7 +58,16 @@ FamChat is a private, WhatsApp-style messaging PWA for one family. It runs entir
 
 ---
 
-## Step 4 — Set Firebase security rules
+## What's included
+
+- **5 colour themes** — Ocean 🌊, Sunset 🌅, Galaxy 🌌, Forest 🌲, Candy 🍭. Change under Settings → Appearance. Each family member picks their own; it's stored locally on their device.
+- **Motivational quote card** — a rotating family quote appears at the top of the home screen, changing every 25 seconds.
+- **Ping button (📢)** — the orange floating button on the home screen sends a real-time ping to all other family members. Great for children to alert Papa/Mum. Recipients get a toast notification (and a system notification if they've granted permission).
+- Private group chat + individual DMs, reactions, typing indicators, unread badges, offline banner.
+
+---
+
+
 
 In your Firebase console → Realtime Database → **Rules** tab, replace the rules with:
 
