@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#0e1117">
+  <meta name="theme-color" content="#020e1e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>FamChat</title>
@@ -13,18 +13,19 @@
        DESIGN TOKENS
     ================================================================ */
     :root {
-      --bg:              #0e1117;
-      --surface:         #161d2b;
-      --surface-raised:  #1e2a3d;
-      --border:          #263348;
-      --bubble-other:    #1e2a3d;
-      --bubble-other-tx: #dde4ed;
-      --input-bg:        #161d2b;
-      --input-border:    #2a3a52;
-      --compose-bg:      #0e1117;
-      --tx-primary:      #eef2f7;
-      --tx-secondary:    #8a9bb0;
-      --tx-muted:        #4e6078;
+      /* Ocean theme — default */
+      --bg:              #020e1e;
+      --surface:         #061b35;
+      --surface-raised:  #0a2a50;
+      --border:          #133d6a;
+      --bubble-other:    #0a2a50;
+      --bubble-other-tx: #d8eaf8;
+      --input-bg:        #061b35;
+      --input-border:    #1a4878;
+      --compose-bg:      #020e1e;
+      --tx-primary:      #e8f3fc;
+      --tx-secondary:    #68afd0;
+      --tx-muted:        #28638a;
       --online:          #22c55e;
       --unread-bg:       #ef4444;
       --rx-bg:           rgba(255,255,255,0.07);
@@ -171,7 +172,58 @@
     }
     .app-hdr-title { font-size: 20px; font-weight: 700; letter-spacing: -.3px; }
 
-    .home-list { flex: 1; overflow-y: auto; }
+    /* ── Quote card ──────────────────────────────────────────────── */
+    .quote-card {
+      flex-shrink: 0; display: flex; align-items: center; gap: 12px;
+      padding: 11px 16px 11px 14px;
+      background: linear-gradient(110deg, var(--surface) 0%, var(--surface-raised) 100%);
+      border-bottom: 1px solid var(--border);
+      border-left: 3px solid var(--tx-muted);
+      transition: opacity .35s;
+    }
+    .quote-card.fading { opacity: 0; }
+    .quote-card-emoji { font-size: 26px; flex-shrink: 0; line-height: 1; }
+    .quote-card-body { flex: 1; min-width: 0; }
+    .quote-card-text {
+      font-size: 12.5px; font-style: italic; color: var(--tx-secondary); line-height: 1.45;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .quote-card-attr { font-size: 11px; color: var(--tx-muted); margin-top: 2px; }
+
+    /* ── Ping FAB ────────────────────────────────────────────────── */
+    .ping-fab {
+      position: absolute; bottom: calc(22px + var(--safe-b)); right: 18px;
+      width: 58px; height: 58px; border-radius: 50%;
+      background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+      border: none; font-size: 26px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 22px rgba(239,68,68,.45);
+      transition: transform .12s, box-shadow .12s;
+      animation: ping-pulse 3s ease-in-out infinite;
+      z-index: 20;
+    }
+    .ping-fab:active { transform: scale(.88); box-shadow: 0 2px 10px rgba(239,68,68,.3); animation: none; }
+    @keyframes ping-pulse {
+      0%,100% { box-shadow: 0 4px 22px rgba(239,68,68,.45); }
+      50%      { box-shadow: 0 4px 30px rgba(239,68,68,.75), 0 0 0 8px rgba(239,68,68,.1); }
+    }
+
+    /* ── Theme swatches (settings) ───────────────────────────────── */
+    .theme-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+    .theme-sw {
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      cursor: pointer; opacity: .55; transition: opacity .15s, transform .12s;
+    }
+    .theme-sw.active { opacity: 1; }
+    .theme-sw:active { transform: scale(.9); }
+    .theme-sw-dot {
+      width: 42px; height: 42px; border-radius: 50%;
+      border: 2.5px solid transparent; position: relative; overflow: hidden;
+    }
+    .theme-sw.active .theme-sw-dot { border-color: var(--tx-primary); }
+    .theme-sw-label { font-size: 11px; color: var(--tx-secondary); }
+
+    .home-list { flex: 1; overflow-y: auto; padding-bottom: 80px; }
     .chat-row {
       display: flex; align-items: center; gap: 14px; padding: 13px 18px;
       cursor: pointer; border-bottom: 1px solid rgba(38,51,72,.5);
@@ -355,6 +407,14 @@
     }
     .pulse { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; animation: pls 2s infinite; }
     @keyframes pls { 0%,100%{opacity:1} 50%{opacity:.3} }
+    #fc-toast {
+      position: fixed; bottom: calc(80px + env(safe-area-inset-bottom,0px)); left: 50%;
+      transform: translateX(-50%); background: #1e293b; border: 1px solid var(--border);
+      color: var(--tx-secondary); font-size: 13px; padding: 8px 18px;
+      border-radius: 20px; z-index: 2000; white-space: nowrap;
+      opacity: 0; transition: opacity .2s; pointer-events: none;
+    }
+    #fc-toast.show { opacity: 1; }
 
     /* ================================================================
        REACTION PICKER
@@ -436,7 +496,15 @@
         </svg>
       </button>
     </header>
+    <div id="quote-card" class="quote-card">
+      <div class="quote-card-emoji">🌟</div>
+      <div class="quote-card-body">
+        <div class="quote-card-text">Family is where life begins and love never ends.</div>
+        <div class="quote-card-attr"></div>
+      </div>
+    </div>
     <div id="home-list" class="home-list"></div>
+    <button class="ping-fab" onclick="doPing()" title="Ping the family!">📢</button>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════
@@ -503,6 +571,10 @@
         <div id="s-members"></div>
       </div>
       <div>
+        <div class="sec-label">Appearance</div>
+        <div id="s-themes" class="theme-row"></div>
+      </div>
+      <div>
         <div class="sec-label">Data</div>
         <button id="s-clear" class="btn-ghost">Clear local cache</button>
         <button id="s-reset" class="btn-danger">Reset app</button>
@@ -513,6 +585,7 @@
 
   <!-- Offline banner -->
   <div id="offline-banner"><div class="pulse"></div>Reconnecting…</div>
+  <div id="fc-toast"></div>
 
   <script>
     // ══════════════════════════════════════════════════════════════════
@@ -535,6 +608,39 @@
     const DB_VER = 1;
     const MAX_MSGS = 50;
     const TYPING_MS = 3000;
+
+    const THEMES = {
+      ocean:  { label:'🌊 Ocean',  bg:'#020e1e', surface:'#061b35', raised:'#0a2a50', border:'#133d6a', txSec:'#68afd0', txMuted:'#28638a', inputBorder:'#1a4878' },
+      sunset: { label:'🌅 Sunset', bg:'#180b04', surface:'#2c1408', raised:'#401c0c', border:'#6a2c10', txSec:'#c07858', txMuted:'#7a3820', inputBorder:'#8a3e20' },
+      galaxy: { label:'🌌 Galaxy', bg:'#070412', surface:'#0f0922', raised:'#180d36', border:'#2c1a68', txSec:'#8878d0', txMuted:'#3c2898', inputBorder:'#3e2a90' },
+      forest: { label:'🌲 Forest', bg:'#030d06', surface:'#07190c', raised:'#0c2a14', border:'#164e20', txSec:'#52a868', txMuted:'#1e6830', inputBorder:'#1e6830' },
+      candy:  { label:'🍭 Candy',  bg:'#110310', surface:'#1f061e', raised:'#2e092c', border:'#541848', txSec:'#c858b8', txMuted:'#7a2070', inputBorder:'#881e7a' },
+    };
+
+    const QUOTES = [
+      { q:"Family is not an important thing — it's everything.", a:"Michael J. Fox" },
+      { q:"In family life, love is the oil that eases friction.", a:"Friedrich Nietzsche" },
+      { q:"A happy family is but an earlier heaven.", a:"George Bernard Shaw" },
+      { q:"Family means nobody gets left behind or forgotten.", a:"Lilo & Stitch" },
+      { q:"The love of a family is life's greatest blessing.", a:"" },
+      { q:"What can you do to promote world peace? Go home and love your family.", a:"Mother Teresa" },
+      { q:"The bond that links a true family is not blood, but respect and joy.", a:"Richard Bach" },
+      { q:"You don't choose your family. They are a gift to you.", a:"Desmond Tutu" },
+      { q:"A family is a little world created by love.", a:"" },
+      { q:"Home is where love resides and memories are made.", a:"" },
+      { q:"Rejoice with your family in the beautiful land of life!", a:"Albert Einstein" },
+      { q:"The most important thing in the world is family and love.", a:"John Wooden" },
+      { q:"To us, family means putting your arms around each other.", a:"Barbara Bush" },
+      { q:"In time of test, family is best.", a:"Burmese Proverb" },
+      { q:"Other things may change us, but we start and end with family.", a:"Anthony Brandt" },
+      { q:"Family is the heart of a home.", a:"" },
+      { q:"Families are the compass that guide us through life.", a:"" },
+      { q:"Call it a clan, a network, or a tribe — it's still a family.", a:"Jane Howard" },
+      { q:"Where there is family, there is love, warmth, and belonging.", a:"" },
+      { q:"The memories we make with our family are everything.", a:"Candace Cameron Bure" },
+    ];
+
+    const QUOTE_EMOJIS = ['🌟','💫','🌈','🏡','❤️','🤝','🌸','⭐','🌻','💪','🫶','✨','🌺','🎉','🏅'];
 
     // ══════════════════════════════════════════════════════════════════
     // HELPERS
@@ -580,6 +686,84 @@
     }
 
     function mkDmId(a, b) { return [a,b].sort().join('--'); }
+
+    let _toastTimer;
+    function showToast(msg, ms=2800) {
+      const el = document.getElementById('fc-toast');
+      if (!el) return;
+      el.textContent = msg; el.classList.add('show');
+      clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+    }
+
+    // ── Themes ────────────────────────────────────────────────────
+    function applyTheme(name) {
+      const t = THEMES[name] || THEMES.ocean;
+      const r = document.documentElement.style;
+      r.setProperty('--bg',             t.bg);
+      r.setProperty('--surface',        t.surface);
+      r.setProperty('--surface-raised', t.raised);
+      r.setProperty('--bubble-other',   t.raised);
+      r.setProperty('--border',         t.border);
+      r.setProperty('--compose-bg',     t.bg);
+      r.setProperty('--input-bg',       t.surface);
+      r.setProperty('--input-border',   t.inputBorder);
+      r.setProperty('--tx-secondary',   t.txSec);
+      r.setProperty('--tx-muted',       t.txMuted);
+      const mc = document.querySelector('meta[name="theme-color"]');
+      if (mc) mc.content = t.bg;
+      localStorage.setItem('fc_theme', name);
+    }
+
+    // ── Quote card ────────────────────────────────────────────────
+    let _quoteTimer, _quoteIdx = -1;
+    function initQuoteCard() {
+      _quoteIdx = Math.floor(Math.random() * QUOTES.length);
+      showQuote();
+      clearInterval(_quoteTimer);
+      _quoteTimer = setInterval(cycleQuote, 25000);
+    }
+    function showQuote() {
+      const card = document.getElementById('quote-card'); if (!card) return;
+      const { q, a } = QUOTES[_quoteIdx];
+      const emoji = QUOTE_EMOJIS[Math.floor(Math.random() * QUOTE_EMOJIS.length)];
+      card.querySelector('.quote-card-emoji').textContent = emoji;
+      card.querySelector('.quote-card-text').textContent  = q;
+      card.querySelector('.quote-card-attr').textContent  = a ? `— ${a}` : '';
+    }
+    function cycleQuote() {
+      const card = document.getElementById('quote-card'); if (!card) return;
+      card.classList.add('fading');
+      setTimeout(() => {
+        _quoteIdx = (_quoteIdx + 1) % QUOTES.length;
+        showQuote();
+        card.classList.remove('fading');
+      }, 360);
+    }
+
+    // ── Ping ──────────────────────────────────────────────────────
+    async function doPing() {
+      const fab = document.querySelector('.ping-fab');
+      if (fab) { fab.style.transform='scale(.82)'; fab.style.animation='none'; setTimeout(()=>{ fab.style.transform=''; fab.style.animation=''; }, 220); }
+      try {
+        await fbDb.ref(`/pings/${uuid()}`).set({ senderId:me.id, senderName:me.name, senderEmoji:me.emoji, ts:Date.now() });
+        showToast('📢 Ping sent to the family!');
+      } catch(e) { showToast('Could not send ping — check connection'); }
+    }
+
+    function listenPings() {
+      let ready = false;
+      fbDb.ref('/pings').limitToLast(1).on('child_added', snap => {
+        if (!ready) { ready = true; return; } // skip pre-existing ping on first load
+        const v = snap.val();
+        if (!v || v.senderId === me.id) return;
+        showToast(`${v.senderEmoji} ${v.senderName} is pinging the family! 📢`, 4000);
+        if (document.visibilityState !== 'visible' && Notification.permission === 'granted') {
+          const n = new Notification(`${v.senderName} is pinging!`, { body:'📢 Family ping received', icon:'./icon-192.png' });
+          n.onclick = () => window.focus();
+        }
+      });
+    }
 
     function avHtml(emoji, color, size) {
       const sz = size==='sm'?36 : size==='bub'?30 : 46;
@@ -802,10 +986,12 @@
     // APP ENTRY
     // ══════════════════════════════════════════════════════════════════
     async function enterApp() {
+      applyTheme(localStorage.getItem('fc_theme') || 'ocean');
       try { const c = await idbAll('members'); c.forEach(m => { members[m.id] = m; }); } catch(e){}
       fbDb.ref(`/members/${me.id}/lastSeen`).set(Date.now()).catch(()=>{});
       setupConnectivity();
       listenMembers();
+      listenPings();
       initHomeScreen();
     }
 
@@ -818,7 +1004,8 @@
         const on = !!snap.val();
         if (banner) banner.style.display = on ? 'none' : 'flex';
         const ta = document.getElementById('compose-ta');
-        if (ta) { ta.disabled = !on; ta.placeholder = on ? 'Message…' : "You're offline"; }
+        if (ta && !on) ta.placeholder = "You're offline…";
+        if (ta && on)  ta.placeholder = 'Message…';
       });
     }
 
@@ -842,6 +1029,7 @@
     function initHomeScreen() {
       showScreen('home');
       currentCh = null;
+      initQuoteCard();
 
       document.getElementById('home-gear').onclick = () => { showScreen('settings'); initSettingsScreen(); };
 
@@ -1109,6 +1297,8 @@
       const bar = document.getElementById('compose-bar');
       if (!ta||!btn||!bar) return;
 
+      ta.disabled = false; // always re-enable on chat open (guard vs connectivity watcher)
+
       // Signature: personal glow from member's accent colour
       if (me) bar.style.boxShadow = `inset 0 0 0 1.5px ${hexToRgba(me.color,.18)}`;
 
@@ -1142,7 +1332,7 @@
         await fbDb.ref(mPath).set({senderId:me.id, text, ts, reactions:{}});
         await fbDb.ref(lPath).set({text, senderId:me.id, ts});
         scrollToBottom(false);
-      } catch(e) { ta.value=text; console.error('Send failed:',e); }
+      } catch(e) { ta.value=text; console.error('Send failed:',e); showToast('Not sent — check your connection'); }
     }
 
     // ── Scroll ─────────────────────────────────────────────────────
@@ -1239,6 +1429,21 @@
       nameIn.value = me.name;
       let selEmoji=me.emoji, selColor=me.color;
 
+      // Theme picker
+      const themeRow = document.getElementById('s-themes');
+      const curTheme = localStorage.getItem('fc_theme') || 'ocean';
+      themeRow.innerHTML = Object.entries(THEMES).map(([key, t]) => {
+        const active = key === curTheme ? 'active' : '';
+        // Gradient dot showing the theme's surface→raised colors
+        const dot = `background:linear-gradient(135deg,${t.surface} 0%,${t.raised} 55%,${t.border} 100%)`;
+        return `<div class="theme-sw ${active}" onclick="applyTheme('${key}');
+          document.querySelectorAll('.theme-sw').forEach(x=>x.classList.remove('active'));
+          this.classList.add('active');">
+          <div class="theme-sw-dot" style="${dot}"></div>
+          <div class="theme-sw-label">${t.label}</div>
+        </div>`;
+      }).join('');
+
       buildPicker(
         document.getElementById('s-emoji'),
         document.getElementById('s-color'),
@@ -1292,6 +1497,7 @@
     // INIT
     // ══════════════════════════════════════════════════════════════════
     async function init() {
+      applyTheme(localStorage.getItem('fc_theme') || 'ocean');
       try { await openDb(); pruneOld(); } catch(e) { console.warn('IDB open failed:', e); }
 
       const cfgStr = localStorage.getItem('fc_firebase');
@@ -1317,4 +1523,4 @@
     init();
   </script>
 </body>
-      </html>
+</html>
