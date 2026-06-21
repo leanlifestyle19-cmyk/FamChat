@@ -349,6 +349,62 @@
     .send-btn:hover { opacity: .9; }
     .send-btn:active { transform: scale(.88); }
 
+    /* ── Mic button ──────────────────────────────────────────────── */
+    .mic-btn {
+      width: 32px; height: 32px; border-radius: 50%; background: transparent;
+      border: none; cursor: pointer; color: var(--tx-muted); font-size: 18px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      transition: color .15s, transform .1s;
+    }
+    .mic-btn:active { transform: scale(.88); color: var(--tx-secondary); }
+
+    /* ── Recording state ─────────────────────────────────────────── */
+    #compose-normal { display: flex; align-items: flex-end; gap: 6px; flex: 1; }
+    #compose-rec    { display: none; align-items: center; gap: 10px; flex: 1; }
+    .rec-dot {
+      width: 10px; height: 10px; border-radius: 50%; background: #ef4444; flex-shrink: 0;
+      animation: rec-blink 1s ease-in-out infinite;
+    }
+    @keyframes rec-blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+    .rec-timer { font-size: 14px; font-variant-numeric: tabular-nums; color: var(--tx-primary); }
+    .rec-cancel {
+      width: 32px; height: 32px; border-radius: 50%; background: transparent;
+      border: 1.5px solid var(--border); color: var(--tx-secondary);
+      font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .rec-send {
+      height: 34px; border-radius: 17px; background: #22c55e; border: none;
+      color: #fff; font-size: 13px; font-weight: 600; padding: 0 14px;
+      cursor: pointer; flex-shrink: 0; transition: transform .1s;
+    }
+    .rec-send:active { transform: scale(.92); }
+
+    /* ── Voice message bubble ────────────────────────────────────── */
+    .voice-bub {
+      display: flex; align-items: center; gap: 10px;
+      min-width: 160px; max-width: 220px; padding: 2px 0;
+    }
+    .voice-play {
+      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+      border: none; cursor: pointer; font-size: 13px;
+      background: rgba(255,255,255,0.22); color: inherit;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .1s, background .15s;
+    }
+    .voice-play:active { transform: scale(.88); }
+    .bub.other .voice-play { background: rgba(0,0,0,0.10); }
+    .voice-wave {
+      flex: 1; display: flex; align-items: center; gap: 2px; height: 28px;
+    }
+    .vbar {
+      flex: 1; border-radius: 2px; background: currentColor; opacity: .55;
+      min-height: 3px;
+    }
+    .vbar.active { opacity: 1; animation: vbar-dance .6s ease-in-out infinite alternate; }
+    @keyframes vbar-dance { from{transform:scaleY(.6)} to{transform:scaleY(1)} }
+    .voice-dur { font-size: 11px; opacity: .75; white-space: nowrap; flex-shrink: 0; }
+
     /* New message chip */
     .new-chip {
       display: none; position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
@@ -447,6 +503,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
   <!-- ═══════════════════════════════════════════════════════
        SCREEN 1 · Firebase Setup
@@ -531,13 +588,23 @@
     <div id="typing-bar" class="typing-bar"></div>
     <div class="compose-area">
       <div id="compose-bar" class="compose-bar">
-        <textarea id="compose-ta" class="compose-ta" placeholder="Message…" rows="1"></textarea>
-        <button id="send-btn" class="send-btn" title="Send">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"/>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </button>
+        <div id="compose-normal">
+          <button id="mic-btn" class="mic-btn" title="Voice message">🎤</button>
+          <textarea id="compose-ta" class="compose-ta" placeholder="Message…" rows="1"></textarea>
+          <button id="send-btn" class="send-btn" title="Send">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+        <div id="compose-rec">
+          <button class="rec-cancel" onclick="cancelRecording()">✕</button>
+          <div class="rec-dot"></div>
+          <span id="rec-timer" class="rec-timer">0:00</span>
+          <div style="flex:1"></div>
+          <button class="rec-send" onclick="stopRecording()">✓ Send</button>
+        </div>
       </div>
     </div>
   </div>
@@ -760,10 +827,42 @@
       }, 360);
     }
 
+    // ── Ping audio ────────────────────────────────────────────────
+    let _audioCtx = null;
+
+    function getAudioCtx() {
+      try {
+        if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (_audioCtx.state === 'suspended') _audioCtx.resume().catch(()=>{});
+        return _audioCtx;
+      } catch(e) { return null; }
+    }
+
+    // Two-note ascending chime: A5 (880Hz) → E6 (1318Hz)
+    function playPingSound() {
+      const ctx = getAudioCtx(); if (!ctx) return;
+      [[880, 0], [1318.5, 0.22]].forEach(([freq, delay]) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const t = ctx.currentTime + delay;
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.38, t + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.52);
+        osc.start(t); osc.stop(t + 0.55);
+      });
+    }
+
+    // Unlock AudioContext on first touch so received pings also play
+    document.addEventListener('pointerdown', () => { getAudioCtx(); }, { once: true, passive: true });
+
     // ── Ping ──────────────────────────────────────────────────────
     async function doPing() {
       const fab = document.querySelector('.ping-fab');
       if (fab) { fab.style.transform='scale(.82)'; fab.style.animation='none'; setTimeout(()=>{ fab.style.transform=''; fab.style.animation=''; }, 220); }
+      playPingSound();
       try {
         await fbDb.ref(`/pings/${uuid()}`).set({ senderId:me.id, senderName:me.name, senderEmoji:me.emoji, ts:Date.now() });
         showToast('📢 Ping sent to the family!');
@@ -776,6 +875,7 @@
         if (!ready) { ready = true; return; } // skip pre-existing ping on first load
         const v = snap.val();
         if (!v || v.senderId === me.id) return;
+        playPingSound();
         showToast(`${v.senderEmoji} ${v.senderName} is pinging the family! 📢`, 4000);
         if (document.visibilityState !== 'visible' && Notification.permission === 'granted') {
           const n = new Notification(`${v.senderName} is pinging!`, { body:'📢 Family ping received', icon:'./icon-192.png' });
@@ -794,7 +894,7 @@
     // ══════════════════════════════════════════════════════════════════
     // APP STATE
     // ══════════════════════════════════════════════════════════════════
-    let db = null, fbDb = null, me = null;
+    let db = null, fbDb = null, fbStorage = null, me = null;
     let members = {};
     let currentCh = null;   // {type, id, memberId}
     let currentMsgs = [];
@@ -887,6 +987,7 @@
       if (firebase.apps.length > 0) await firebase.app().delete();
       firebase.initializeApp(cfg);
       fbDb = firebase.database();
+      fbStorage = firebase.storage();
       // Sign in anonymously so security rules (auth != null) pass.
       // Firebase persists the anonymous session automatically across reloads.
       await firebase.auth().signInAnonymously();
@@ -1140,7 +1241,8 @@
 
     function previewStr(last) {
       const sn = last.senderId===me.id ? 'You' : (members[last.senderId]?.name||'?');
-      return `<span class="prev-name">${esc(sn)}:</span> ${esc((last.text||'').slice(0,50))}`;
+      const txt = last.type==='voice' ? '🎤 Voice message' : (last.text||'').slice(0,50);
+      return `<span class="prev-name">${esc(sn)}:</span> ${esc(txt)}`;
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -1265,7 +1367,7 @@
                    oncontextmenu="showPicker(event,'${msg.id}');return false"
                    ontouchstart="tStart(event,'${msg.id}')" ontouchend="tEnd()"
                    data-mid="${msg.id}">
-                ${esc(msg.text).replace(/\n/g,'<br>')}
+                ${msgContentHtml(msg)}
               </div>
               ${rxHtml}
             </div>
@@ -1280,7 +1382,7 @@
                    oncontextmenu="showPicker(event,'${msg.id}');return false"
                    ontouchstart="tStart(event,'${msg.id}')" ontouchend="tEnd()"
                    data-mid="${msg.id}">
-                ${esc(msg.text).replace(/\n/g,'<br>')}
+                ${msgContentHtml(msg)}
               </div>
               ${rxHtml}
             </div>
@@ -1338,6 +1440,9 @@
 
       ta.onkeydown = e => { if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();} };
       btn.onclick  = sendMsg;
+
+      const mic = document.getElementById('mic-btn');
+      if (mic) mic.onclick = startRecording;
     }
 
     async function sendMsg() {
@@ -1355,6 +1460,129 @@
         await fbDb.ref(lPath).set({text, senderId:me.id, ts});
         scrollToBottom(false);
       } catch(e) { ta.value=text; console.error('Send failed:',e); showToast('Not sent — check your connection'); }
+    }
+
+    // ── Voice messages ────────────────────────────────────────────
+    let mediaRecorder = null, recChunks = [], recTimerInt = null, recSeconds = 0;
+
+    async function startRecording() {
+      if (!fbStorage) { showToast('Voice requires Firebase Storage — see README'); return; }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mime = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4']
+          .find(t => MediaRecorder.isTypeSupported(t)) || '';
+        mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
+        recChunks = [];
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+          stream.getTracks().forEach(t => t.stop());
+          const blob = new Blob(recChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+          sendVoiceMsg(blob, recSeconds);
+        };
+        mediaRecorder.start(100);
+        // Show recording UI
+        document.getElementById('compose-normal').style.display = 'none';
+        document.getElementById('compose-rec').style.display = 'flex';
+        recSeconds = 0;
+        document.getElementById('rec-timer').textContent = '0:00';
+        recTimerInt = setInterval(() => {
+          recSeconds++;
+          const m = Math.floor(recSeconds/60), s = String(recSeconds%60).padStart(2,'0');
+          document.getElementById('rec-timer').textContent = `${m}:${s}`;
+          if (recSeconds >= 120) stopRecording(); // 2-min hard cap
+        }, 1000);
+      } catch(e) {
+        showToast('Microphone not available — check permissions');
+      }
+    }
+
+    function stopRecording() {
+      clearInterval(recTimerInt);
+      document.getElementById('compose-normal').style.display = 'flex';
+      document.getElementById('compose-rec').style.display = 'none';
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    }
+
+    function cancelRecording() {
+      clearInterval(recTimerInt);
+      if (mediaRecorder) {
+        mediaRecorder.onstop = null; // suppress send
+        if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+        mediaRecorder = null;
+      }
+      recChunks = [];
+      document.getElementById('compose-normal').style.display = 'flex';
+      document.getElementById('compose-rec').style.display = 'none';
+    }
+
+    async function sendVoiceMsg(blob, duration) {
+      if (!currentCh || !blob.size) return;
+      showToast('Uploading voice message…');
+      try {
+        const id  = uuid();
+        const ext = blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm';
+        const ref = fbStorage.ref(`voice/${currentCh.id}/${id}.${ext}`);
+        const snap = await ref.put(blob);
+        const url  = await snap.ref.getDownloadURL();
+        const mPath = currentCh.type==='group'
+          ? `/channels/group/messages/${id}`
+          : `/channels/dm/${currentCh.id}/messages/${id}`;
+        const lPath = currentCh.type==='group'
+          ? '/channels/group/lastMsg'
+          : `/channels/dm/${currentCh.id}/lastMsg`;
+        await fbDb.ref(mPath).set({ id, senderId:me.id, type:'voice', url, duration, ts:Date.now() });
+        await fbDb.ref(lPath).set({ text:'🎤 Voice message', senderId:me.id, ts:Date.now() });
+        scrollToBottom(false);
+      } catch(e) {
+        console.error('Voice upload failed:', e);
+        showToast('Voice upload failed — check Firebase Storage setup');
+      }
+    }
+
+    function msgContentHtml(msg) {
+      if (msg.type === 'voice') {
+        const dur = fmtVoiceDur(msg.duration || 0);
+        const bars = [38,72,52,85,42,68,55,78,45].map((h,i) =>
+          `<div class="vbar" style="height:${h}%" data-vi="${i}"></div>`).join('');
+        const safeUrl = (msg.url||'').replace(/'/g,'%27');
+        return `<div class="voice-bub">
+          <button class="voice-play" onclick="playVoice(this,'${safeUrl}')">▶</button>
+          <div class="voice-wave">${bars}</div>
+          <span class="voice-dur">${dur}</span>
+        </div>`;
+      }
+      return esc(msg.text||'').replace(/\n/g,'<br>');
+    }
+
+    function fmtVoiceDur(s) {
+      return `${Math.floor(s/60)}:${String(Math.round(s)%60).padStart(2,'0')}`;
+    }
+
+    // Active audio tracker (one at a time)
+    let _activeAudio = null, _activeBtn = null;
+
+    function playVoice(btn, url) {
+      // Pause any currently playing voice message
+      if (_activeAudio && !_activeAudio.paused) {
+        _activeAudio.pause();
+        if (_activeBtn) { _activeBtn.textContent='▶'; setVbarActive(_activeBtn,false); }
+        if (_activeBtn === btn) { _activeAudio=null; _activeBtn=null; return; }
+      }
+      if (!btn._audio) {
+        const audio = new Audio(url);
+        btn._audio = audio;
+        audio.onended = () => { btn.textContent='▶'; setVbarActive(btn,false); _activeAudio=null; _activeBtn=null; };
+        audio.onerror = () => { showToast('Could not load audio'); btn.textContent='▶'; setVbarActive(btn,false); };
+      }
+      btn._audio.play().then(() => {
+        btn.textContent='⏸'; setVbarActive(btn,true);
+        _activeAudio=btn._audio; _activeBtn=btn;
+      }).catch(() => showToast('Tap anywhere first to enable audio'));
+    }
+
+    function setVbarActive(btn, on) {
+      const bars = btn.closest('.voice-bub')?.querySelectorAll('.vbar');
+      if (bars) bars.forEach(b => b.classList.toggle('active', on));
     }
 
     // ── Scroll ─────────────────────────────────────────────────────
