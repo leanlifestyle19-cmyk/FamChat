@@ -503,7 +503,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
   <!-- ═══════════════════════════════════════════════════════
        SCREEN 1 · Firebase Setup
@@ -894,7 +893,7 @@
     // ══════════════════════════════════════════════════════════════════
     // APP STATE
     // ══════════════════════════════════════════════════════════════════
-    let db = null, fbDb = null, fbStorage = null, me = null;
+    let db = null, fbDb = null, me = null;
     let members = {};
     let currentCh = null;   // {type, id, memberId}
     let currentMsgs = [];
@@ -987,7 +986,6 @@
       if (firebase.apps.length > 0) await firebase.app().delete();
       firebase.initializeApp(cfg);
       fbDb = firebase.database();
-      fbStorage = firebase.storage();
       // Sign in anonymously so security rules (auth != null) pass.
       // Firebase persists the anonymous session automatically across reloads.
       await firebase.auth().signInAnonymously();
@@ -1464,9 +1462,9 @@
 
     // ── Voice messages ────────────────────────────────────────────
     let mediaRecorder = null, recChunks = [], recTimerInt = null, recSeconds = 0;
+    const voiceCache = {}; // msgId → { data: base64, mimeType }
 
     async function startRecording() {
-      if (!fbStorage) { showToast('Voice requires Firebase Storage — see README'); return; }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const mime = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4']
@@ -1480,7 +1478,6 @@
           sendVoiceMsg(blob, recSeconds);
         };
         mediaRecorder.start(100);
-        // Show recording UI
         document.getElementById('compose-normal').style.display = 'none';
         document.getElementById('compose-rec').style.display = 'flex';
         recSeconds = 0;
@@ -1489,7 +1486,7 @@
           recSeconds++;
           const m = Math.floor(recSeconds/60), s = String(recSeconds%60).padStart(2,'0');
           document.getElementById('rec-timer').textContent = `${m}:${s}`;
-          if (recSeconds >= 120) stopRecording(); // 2-min hard cap
+          if (recSeconds >= 60) stopRecording();
         }, 1000);
       } catch(e) {
         showToast('Microphone not available — check permissions');
@@ -1506,7 +1503,7 @@
     function cancelRecording() {
       clearInterval(recTimerInt);
       if (mediaRecorder) {
-        mediaRecorder.onstop = null; // suppress send
+        mediaRecorder.onstop = null;
         if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
         mediaRecorder = null;
       }
@@ -1517,36 +1514,44 @@
 
     async function sendVoiceMsg(blob, duration) {
       if (!currentCh || !blob.size) return;
-      showToast('Uploading voice message…');
+      showToast('Sending voice message…');
       try {
-        const id  = uuid();
-        const ext = blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm';
-        const ref = fbStorage.ref(`voice/${currentCh.id}/${id}.${ext}`);
-        const snap = await ref.put(blob);
-        const url  = await snap.ref.getDownloadURL();
+        // Convert blob → base64 and store directly in RTDB (free plan compatible)
+        const base64 = await new Promise((res, rej) => {
+          const r = new FileReader();
+          r.onload = e => res(e.target.result.split(',')[1]);
+          r.onerror = rej;
+          r.readAsDataURL(blob);
+        });
+        const id    = uuid();
         const mPath = currentCh.type==='group'
           ? `/channels/group/messages/${id}`
           : `/channels/dm/${currentCh.id}/messages/${id}`;
         const lPath = currentCh.type==='group'
           ? '/channels/group/lastMsg'
           : `/channels/dm/${currentCh.id}/lastMsg`;
-        await fbDb.ref(mPath).set({ id, senderId:me.id, type:'voice', url, duration, ts:Date.now() });
+        await fbDb.ref(mPath).set({
+          id, senderId:me.id, type:'voice',
+          audioData:base64, mimeType:blob.type||'audio/webm',
+          duration, ts:Date.now()
+        });
         await fbDb.ref(lPath).set({ text:'🎤 Voice message', senderId:me.id, ts:Date.now() });
         scrollToBottom(false);
       } catch(e) {
-        console.error('Voice upload failed:', e);
-        showToast('Voice upload failed — check Firebase Storage setup');
+        console.error('Voice send failed:', e);
+        showToast('Failed to send — try a shorter recording');
       }
     }
 
     function msgContentHtml(msg) {
       if (msg.type === 'voice') {
-        const dur = fmtVoiceDur(msg.duration || 0);
-        const bars = [38,72,52,85,42,68,55,78,45].map((h,i) =>
-          `<div class="vbar" style="height:${h}%" data-vi="${i}"></div>`).join('');
-        const safeUrl = (msg.url||'').replace(/'/g,'%27');
+        // Cache audio data by msgId so playVoice can find it
+        if (msg.audioData) voiceCache[msg.id] = { data:msg.audioData, mimeType:msg.mimeType||'audio/webm' };
+        const dur  = fmtVoiceDur(msg.duration || 0);
+        const bars = [38,72,52,85,42,68,55,78,45].map(h =>
+          `<div class="vbar" style="height:${h}%"></div>`).join('');
         return `<div class="voice-bub">
-          <button class="voice-play" onclick="playVoice(this,'${safeUrl}')">▶</button>
+          <button class="voice-play" onclick="playVoice(this,'${msg.id}')">▶</button>
           <div class="voice-wave">${bars}</div>
           <span class="voice-dur">${dur}</span>
         </div>`;
@@ -1558,31 +1563,30 @@
       return `${Math.floor(s/60)}:${String(Math.round(s)%60).padStart(2,'0')}`;
     }
 
-    // Active audio tracker (one at a time)
     let _activeAudio = null, _activeBtn = null;
 
-    function playVoice(btn, url) {
-      // Pause any currently playing voice message
+    function playVoice(btn, msgId) {
+      const cached = voiceCache[msgId];
+      if (!cached) { showToast('Audio not loaded yet — try again'); return; }
+      // Pause anything already playing
       if (_activeAudio && !_activeAudio.paused) {
         _activeAudio.pause();
         if (_activeBtn) { _activeBtn.textContent='▶'; setVbarActive(_activeBtn,false); }
         if (_activeBtn === btn) { _activeAudio=null; _activeBtn=null; return; }
       }
       if (!btn._audio) {
-        const audio = new Audio(url);
-        btn._audio = audio;
-        audio.onended = () => { btn.textContent='▶'; setVbarActive(btn,false); _activeAudio=null; _activeBtn=null; };
-        audio.onerror = () => { showToast('Could not load audio'); btn.textContent='▶'; setVbarActive(btn,false); };
+        btn._audio = new Audio(`data:${cached.mimeType};base64,${cached.data}`);
+        btn._audio.onended = () => { btn.textContent='▶'; setVbarActive(btn,false); _activeAudio=null; _activeBtn=null; };
+        btn._audio.onerror = () => { showToast('Could not play audio'); btn.textContent='▶'; };
       }
-      btn._audio.play().then(() => {
-        btn.textContent='⏸'; setVbarActive(btn,true);
-        _activeAudio=btn._audio; _activeBtn=btn;
-      }).catch(() => showToast('Tap anywhere first to enable audio'));
+      btn._audio.play()
+        .then(() => { btn.textContent='⏸'; setVbarActive(btn,true); _activeAudio=btn._audio; _activeBtn=btn; })
+        .catch(() => showToast('Tap anywhere first to enable audio'));
     }
 
     function setVbarActive(btn, on) {
-      const bars = btn.closest('.voice-bub')?.querySelectorAll('.vbar');
-      if (bars) bars.forEach(b => b.classList.toggle('active', on));
+      btn.closest('.voice-bub')?.querySelectorAll('.vbar')
+        .forEach(b => b.classList.toggle('active', on));
     }
 
     // ── Scroll ─────────────────────────────────────────────────────
