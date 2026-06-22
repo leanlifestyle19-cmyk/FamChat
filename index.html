@@ -900,7 +900,7 @@
 
     function openStudio(loadName) {
       showScreen('studio');
-      requestAnimationFrame(() => _initCanvas(loadName));
+      setTimeout(() => _initCanvas(loadName), 80);
     }
 
     function _initCanvas(loadName) {
@@ -908,6 +908,8 @@
       _dc2 = cv.getContext('2d');
       const dpr = Math.min(window.devicePixelRatio||1, 2);
       const W = cv.offsetWidth, H = cv.offsetHeight;
+      // If layout hasn't settled yet, retry once more
+      if (!W || !H) { setTimeout(() => _initCanvas(loadName), 100); return; }
       cv.width = W * dpr; cv.height = H * dpr;
       _dc2.scale(dpr, dpr);
       // Fill background
@@ -940,14 +942,16 @@
     function _cvPos(e) {
       const cv = document.getElementById('draw-canvas');
       const r = cv.getBoundingClientRect();
-      const s = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : e);
-      return { x: s.clientX - r.left, y: s.clientY - r.top };
+      const src = (e.touches && e.touches.length)
+        ? e.touches[0]
+        : (e.changedTouches && e.changedTouches.length ? e.changedTouches[0] : e);
+      return { x: src.clientX - r.left, y: src.clientY - r.top };
     }
 
     function _pushH() {
       const cv = document.getElementById('draw-canvas');
       if (_dHist.length >= 20) _dHist.shift();
-      _dHist.push(_dc2.getImageData(0,0,cv.offsetWidth,cv.offsetHeight));
+      _dHist.push(_dc2.getImageData(0, 0, cv.width, cv.height));
     }
 
     function _dStart2(e) {
@@ -975,7 +979,7 @@
         _dc2.beginPath(); _dc2.moveTo(p.x,p.y);
       } else {
         const cv=document.getElementById('draw-canvas');
-        _snap2=_dc2.getImageData(0,0,cv.offsetWidth,cv.offsetHeight);
+        _snap2=_dc2.getImageData(0,0,cv.width,cv.height);
       }
     }
 
