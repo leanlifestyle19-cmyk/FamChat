@@ -1293,7 +1293,7 @@
     // SCREEN ROUTING
     // ══════════════════════════════════════════════════════════════════
     function showScreen(name) {
-      ['firebase','profile','home','chat','settings'].forEach(s => {
+      ['firebase','profile','home','chat','settings','studio'].forEach(s => {
         document.getElementById(`s-${s}`)?.classList.toggle('active', s===name);
       });
     }
