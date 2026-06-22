@@ -58,7 +58,7 @@
       background: var(--bg);
       background-image: var(--bg-wave, none);
       background-position: bottom center;
-      background-size: 100% 38%;
+      background-size: var(--bg-wave-size, 100% 38%);
       background-repeat: no-repeat;
     }
     .screen.active { display: flex; }
@@ -226,6 +226,67 @@
     }
     .theme-sw.active .theme-sw-dot { border-color: var(--tx-primary); }
     .theme-sw-label { font-size: 11px; color: var(--tx-secondary); }
+
+    /* ── Background Studio ───────────────────────────────────────── */
+    #s-studio { background: #111; }
+    .studio-hdr {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px 8px; background: rgba(0,0,0,.75); flex-shrink: 0; z-index: 5;
+    }
+    .studio-name-in {
+      flex: 1; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+      color: #fff; border-radius: 8px; padding: 6px 10px; font-size: 14px; outline: none;
+    }
+    .studio-save-btn {
+      background: #3b82f6; color: #fff; border: none; border-radius: 8px;
+      padding: 7px 16px; font-size: 14px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+    }
+    #draw-canvas { flex: 1; display: block; touch-action: none; cursor: crosshair; width: 100%; }
+    .studio-bar {
+      background: rgba(0,0,0,.82); padding: 8px 10px 10px; flex-shrink: 0;
+      display: flex; flex-direction: column; gap: 7px;
+    }
+    .studio-color-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .studio-swatch-main {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      cursor: pointer; border: 2px solid rgba(255,255,255,.5);
+    }
+    .studio-hex {
+      width: 88px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+      color: #fff; border-radius: 6px; padding: 5px 8px; font-size: 13px;
+      font-family: monospace; outline: none;
+    }
+    .ps { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; flex-shrink: 0;
+         border: 1.5px solid rgba(255,255,255,.25); transition: transform .1s; }
+    .ps:active { transform: scale(.85); }
+    .studio-tools { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+    .tb {
+      width: 36px; height: 36px; border-radius: 8px; border: 1.5px solid rgba(255,255,255,.15);
+      background: rgba(255,255,255,.08); color: #fff; font-size: 15px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: background .1s;
+      flex-shrink: 0;
+    }
+    .tb.on { background: #3b82f6; border-color: #3b82f6; }
+    .tb:active { transform: scale(.88); }
+    .sdiv { width: 1px; height: 28px; background: rgba(255,255,255,.15); margin: 0 2px; flex-shrink: 0; }
+    .sz { width: 30px; height: 30px; border-radius: 6px; background: rgba(255,255,255,.08);
+         border: 1px solid rgba(255,255,255,.15); color: #fff; cursor: pointer;
+         display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .sz.on { background: rgba(255,255,255,.28); }
+    .poly-tip { font-size: 11px; color: rgba(255,255,255,.5); text-align: center; }
+    /* Saved bg gallery in Settings */
+    .bg-gallery { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+    .bg-thumb-row {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface-raised); border-radius: 10px; padding: 6px 10px;
+    }
+    .bg-thumb { width: 54px; height: 36px; object-fit: cover; border-radius: 5px; flex-shrink: 0; }
+    .bg-thumb-name { flex: 1; font-size: 13px; color: var(--tx-primary); min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .btn-apply { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: #3b82f6;
+      color: #fff; border: none; cursor: pointer; flex-shrink: 0; }
+    .btn-del { font-size: 12px; padding: 4px 8px; border-radius: 6px; background: transparent;
+      color: var(--tx-muted); border: 1px solid var(--border); cursor: pointer; flex-shrink: 0; }
 
     .home-list { flex: 1; overflow-y: auto; padding-bottom: 80px; }
     .chat-row {
@@ -644,6 +705,10 @@
       <div>
         <div class="sec-label">Appearance</div>
         <div id="s-themes" class="theme-row"></div>
+        <div class="sec-label" style="margin-top:14px">Background Studio</div>
+        <button id="s-open-studio" class="btn-ghost">🎨 Open Drawing Studio</button>
+        <div id="s-bg-gallery" class="bg-gallery"></div>
+        <button id="s-rm-bg" class="btn-ghost" style="display:none;margin-top:4px">Remove custom background</button>
       </div>
       <div>
         <div class="sec-label">Data</div>
@@ -795,6 +860,7 @@
       r.setProperty('--rx-bg',           t.rxBg    || 'rgba(255,255,255,0.07)');
       r.setProperty('--rx-own-bg',       t.rxOwnBg || 'rgba(255,255,255,0.18)');
       r.setProperty('--bg-wave',         t.light ? `url("${WAVE_URI}")` : 'none');
+      r.setProperty('--bg-wave-size',    '100% 38%');
       const mc = document.querySelector('meta[name="theme-color"]');
       if (mc) mc.content = t.bg;
       localStorage.setItem('fc_theme', name);
@@ -824,6 +890,222 @@
         showQuote();
         card.classList.remove('fading');
       }, 360);
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // BACKGROUND STUDIO
+    // ══════════════════════════════════════════════════════════════════
+    let _dt='pen', _dc2=null, _dColor='#3b82f6', _dSize=2, _dFill=false;
+    let _drawing2=false, _dStart=null, _snap2=null, _dHist=[], _polyPts=[], _lastTap2=0;
+
+    function openStudio(loadName) {
+      showScreen('studio');
+      requestAnimationFrame(() => _initCanvas(loadName));
+    }
+
+    function _initCanvas(loadName) {
+      const cv = document.getElementById('draw-canvas');
+      _dc2 = cv.getContext('2d');
+      const dpr = Math.min(window.devicePixelRatio||1, 2);
+      const W = cv.offsetWidth, H = cv.offsetHeight;
+      cv.width = W * dpr; cv.height = H * dpr;
+      _dc2.scale(dpr, dpr);
+      // Fill background
+      const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#dff4fb';
+      _dc2.fillStyle = bg;
+      _dc2.fillRect(0,0,W,H);
+      // Load existing custom or named bg
+      const src = loadName
+        ? localStorage.getItem(`fc_bg_${loadName}`)
+        : localStorage.getItem('fc_active_bg');
+      if (src) {
+        const img = new Image();
+        img.onload = () => _dc2.drawImage(img,0,0,W,H);
+        img.src = src;
+      }
+      if (loadName) document.getElementById('studio-name').value = loadName;
+      _dHist=[]; _polyPts=[]; _drawing2=false;
+      // Events (attach fresh)
+      cv.onmousedown  = _dStart2;
+      cv.onmousemove  = _dMove2;
+      cv.onmouseup    = _dEnd2;
+      cv.ontouchstart = e => { e.preventDefault(); _dStart2(e); };
+      cv.ontouchmove  = e => { e.preventDefault(); _dMove2(e); };
+      cv.ontouchend   = e => { e.preventDefault(); _dEnd2(e); };
+      _updateSwatches();
+    }
+
+    function closeStudio() { _polyPts=[]; _drawing2=false; showScreen('home'); }
+
+    function _cvPos(e) {
+      const cv = document.getElementById('draw-canvas');
+      const r = cv.getBoundingClientRect();
+      const s = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : e);
+      return { x: s.clientX - r.left, y: s.clientY - r.top };
+    }
+
+    function _pushH() {
+      const cv = document.getElementById('draw-canvas');
+      if (_dHist.length >= 20) _dHist.shift();
+      _dHist.push(_dc2.getImageData(0,0,cv.offsetWidth,cv.offsetHeight));
+    }
+
+    function _dStart2(e) {
+      const p = _cvPos(e);
+      if (_dt === 'poly') {
+        const now = Date.now();
+        if (now - _lastTap2 < 320 && _polyPts.length >= 2) {
+          _closePoly(); _lastTap2=0; return;
+        }
+        _lastTap2 = now;
+        if (_polyPts.length === 0) _pushH();
+        _polyPts.push(p);
+        _dc2.beginPath(); _dc2.arc(p.x,p.y,_dSize/2+2,0,Math.PI*2);
+        _dc2.fillStyle=_dColor; _dc2.fill();
+        if (_polyPts.length > 1) {
+          const prev=_polyPts[_polyPts.length-2];
+          _dc2.beginPath(); _dc2.moveTo(prev.x,prev.y); _dc2.lineTo(p.x,p.y);
+          _dc2.strokeStyle=_dColor; _dc2.lineWidth=_dSize; _dc2.lineCap='round'; _dc2.stroke();
+        }
+        return;
+      }
+      _drawing2=true; _dStart=p;
+      if (_dt==='pen'||_dt==='era') {
+        _pushH();
+        _dc2.beginPath(); _dc2.moveTo(p.x,p.y);
+      } else {
+        const cv=document.getElementById('draw-canvas');
+        _snap2=_dc2.getImageData(0,0,cv.offsetWidth,cv.offsetHeight);
+      }
+    }
+
+    function _dMove2(e) {
+      if (!_drawing2) return;
+      const p = _cvPos(e);
+      _dc2.lineCap='round'; _dc2.lineJoin='round';
+      if (_dt==='pen') {
+        _dc2.lineTo(p.x,p.y); _dc2.strokeStyle=_dColor; _dc2.lineWidth=_dSize; _dc2.stroke();
+      } else if (_dt==='era') {
+        const bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#dff4fb';
+        _dc2.lineTo(p.x,p.y); _dc2.strokeStyle=bg; _dc2.lineWidth=_dSize*5; _dc2.stroke();
+      } else if (_snap2) {
+        const cv=document.getElementById('draw-canvas');
+        _dc2.putImageData(_snap2,0,0); _drawShape(_dt,_dStart,p);
+      }
+    }
+
+    function _dEnd2(e) {
+      if (!_drawing2) return;
+      _drawing2=false;
+      if (_dt==='pen'||_dt==='era') { return; }
+      if (_snap2) {
+        const p=_cvPos(e);
+        const cv=document.getElementById('draw-canvas');
+        _dc2.putImageData(_snap2,0,0); _pushH(); _drawShape(_dt,_dStart,p); _snap2=null;
+      }
+    }
+
+    function _drawShape(tool,a,b) {
+      _dc2.strokeStyle=_dColor; _dc2.fillStyle=_dColor; _dc2.lineWidth=_dSize;
+      if (tool==='rect') {
+        if (_dFill) _dc2.fillRect(a.x,a.y,b.x-a.x,b.y-a.y);
+        else _dc2.strokeRect(a.x,a.y,b.x-a.x,b.y-a.y);
+      } else if (tool==='circ') {
+        const cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,rx=Math.abs(b.x-a.x)/2,ry=Math.abs(b.y-a.y)/2;
+        _dc2.beginPath(); _dc2.ellipse(cx,cy,Math.max(rx,1),Math.max(ry,1),0,0,Math.PI*2);
+        if (_dFill) _dc2.fill(); else _dc2.stroke();
+      }
+    }
+
+    function _closePoly() {
+      if (_polyPts.length < 2) return;
+      _dc2.beginPath(); _dc2.moveTo(_polyPts[0].x,_polyPts[0].y);
+      _polyPts.forEach(p=>_dc2.lineTo(p.x,p.y));
+      _dc2.closePath();
+      if (_dFill) { _dc2.fillStyle=_dColor; _dc2.fill(); }
+      _dc2.strokeStyle=_dColor; _dc2.lineWidth=_dSize; _dc2.stroke();
+      _polyPts=[];
+    }
+
+    function setTool(t) {
+      _dt=t; _polyPts=[];
+      ['pen','rect','circ','poly','era'].forEach(id=>{
+        const b=document.getElementById(`tb-${id}`); if(b) b.classList.toggle('on',id===t);
+      });
+      const tip=document.getElementById('poly-tip');
+      if(tip) tip.style.display=t==='poly'?'block':'none';
+    }
+
+    function pickColor(hex) {
+      _dColor=hex;
+      const sw=document.getElementById('studio-sw'); if(sw) sw.style.background=hex;
+      const hi=document.getElementById('hex-in'); if(hi) hi.value=hex;
+    }
+
+    function _onHex() {
+      const v=(document.getElementById('hex-in')||{}).value||'';
+      if(/^#[0-9a-fA-F]{6}$/.test(v)) pickColor(v);
+    }
+
+    function setSz(w,btn) {
+      _dSize=w;
+      document.querySelectorAll('.sz').forEach(b=>b.classList.remove('on'));
+      if(btn) btn.classList.add('on');
+    }
+
+    function toggleFill() {
+      _dFill=!_dFill;
+      const b=document.getElementById('tb-fill'); if(b) b.classList.toggle('on',_dFill);
+    }
+
+    function undoDraw() {
+      if(!_dHist.length) return;
+      _dc2.putImageData(_dHist.pop(),0,0);
+    }
+
+    function clearCanvas() {
+      const cv=document.getElementById('draw-canvas');
+      _pushH();
+      const bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#dff4fb';
+      _dc2.fillStyle=bg; _dc2.fillRect(0,0,cv.offsetWidth,cv.offsetHeight);
+      _polyPts=[];
+    }
+
+    function saveBackground() {
+      const cv=document.getElementById('draw-canvas');
+      const name=(document.getElementById('studio-name').value.trim()||'My Background').replace(/[^\w\s-]/g,'').trim().slice(0,30)||'My Background';
+      try {
+        const url=cv.toDataURL('image/jpeg',0.82);
+        localStorage.setItem(`fc_bg_${name}`,url);
+        applyCustomBg(url);
+        showToast(`✅ "${name}" saved & applied!`);
+      } catch(e) { showToast('Save failed — try Clear first then redraw'); }
+    }
+
+    function applyCustomBg(url) {
+      const r=document.documentElement.style;
+      r.setProperty('--bg-wave',`url("${url}")`);
+      r.setProperty('--bg-wave-size','cover');
+      localStorage.setItem('fc_active_bg',url);
+    }
+
+    function removeCustomBg() {
+      localStorage.removeItem('fc_active_bg');
+      const r=document.documentElement.style;
+      r.setProperty('--bg-wave-size','100% 38%');
+      applyTheme(localStorage.getItem('fc_theme')||'ocean');
+      showToast('Custom background removed');
+    }
+
+    function deleteSavedBg(name,row) {
+      localStorage.removeItem(`fc_bg_${name}`);
+      if(row) row.remove();
+      showToast(`"${name}" deleted`);
+    }
+
+    function _updateSwatches() {
+      const sw=document.getElementById('studio-sw'); if(sw) sw.style.background=_dColor;
+      const hi=document.getElementById('hex-in'); if(hi) { hi.value=_dColor; hi.oninput=_onHex; }
     }
 
     // ── Ping audio ────────────────────────────────────────────────
@@ -1742,6 +2024,39 @@
         location.reload();
       };
 
+      // Studio button
+      document.getElementById('s-open-studio').onclick = () => openStudio();
+
+      // Saved backgrounds gallery
+      const gallery = document.getElementById('s-bg-gallery');
+      const rmBtn   = document.getElementById('s-rm-bg');
+      const saved   = [];
+      for (let i=0; i<localStorage.length; i++) {
+        const k=localStorage.key(i);
+        if (k&&k.startsWith('fc_bg_')) saved.push({ name:k.slice(6), key:k });
+      }
+      if (saved.length) {
+        gallery.innerHTML = saved.map(bg=>`
+          <div class="bg-thumb-row" data-bgname="${esc(bg.name)}">
+            <img class="bg-thumb" src="${localStorage.getItem(bg.key)||''}">
+            <span class="bg-thumb-name">${esc(bg.name)}</span>
+            <button class="btn-apply _bga">Apply</button>
+            <button class="btn-del _bgd">✕</button>
+          </div>`).join('');
+        gallery.querySelectorAll('._bga').forEach(btn=>{
+          const name=btn.closest('[data-bgname]').dataset.bgname;
+          btn.onclick=()=>{ const d=localStorage.getItem(`fc_bg_${name}`); if(d){applyCustomBg(d);showToast(`"${name}" applied!`);} };
+        });
+        gallery.querySelectorAll('._bgd').forEach(btn=>{
+          const row=btn.closest('[data-bgname]');
+          btn.onclick=()=>{ deleteSavedBg(row.dataset.bgname,row); };
+        });
+      } else {
+        gallery.innerHTML='<div style="font-size:13px;color:var(--tx-muted)">No saved backgrounds yet</div>';
+      }
+      if (localStorage.getItem('fc_active_bg')) rmBtn.style.display='block';
+      rmBtn.onclick=removeCustomBg;
+
       renderSettingsMembers();
     }
 
@@ -1765,6 +2080,8 @@
     // ══════════════════════════════════════════════════════════════════
     async function init() {
       applyTheme(localStorage.getItem('fc_theme') || 'ocean');
+      const _cbg = localStorage.getItem('fc_active_bg');
+      if (_cbg) applyCustomBg(_cbg);
       try { await openDb(); pruneOld(); } catch(e) { console.warn('IDB open failed:', e); }
 
       const cfgStr = localStorage.getItem('fc_firebase');
@@ -1789,5 +2106,49 @@
 
     init();
   </script>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SCREEN 6 · Background Studio
+  ═══════════════════════════════════════════════════════ -->
+  <div id="s-studio" class="screen">
+    <div class="studio-hdr">
+      <button onclick="closeStudio()" style="background:transparent;border:none;color:#fff;font-size:24px;cursor:pointer;line-height:1;padding:0 4px;">←</button>
+      <input id="studio-name" type="text" class="studio-name-in" placeholder="Name your background…" maxlength="30">
+      <button onclick="saveBackground()" class="studio-save-btn">Save ✓</button>
+    </div>
+    <canvas id="draw-canvas"></canvas>
+    <div class="studio-bar">
+      <div class="studio-color-row">
+        <div id="studio-sw" class="studio-swatch-main" style="background:#3b82f6"></div>
+        <input id="hex-in" class="studio-hex" maxlength="7" value="#3b82f6" placeholder="#rrggbb">
+        <div class="ps" style="background:#ef4444" onclick="pickColor('#ef4444')"></div>
+        <div class="ps" style="background:#f97316" onclick="pickColor('#f97316')"></div>
+        <div class="ps" style="background:#eab308" onclick="pickColor('#eab308')"></div>
+        <div class="ps" style="background:#22c55e" onclick="pickColor('#22c55e')"></div>
+        <div class="ps" style="background:#3b82f6" onclick="pickColor('#3b82f6')"></div>
+        <div class="ps" style="background:#a855f7" onclick="pickColor('#a855f7')"></div>
+        <div class="ps" style="background:#ec4899" onclick="pickColor('#ec4899')"></div>
+        <div class="ps" style="background:#ffffff;border-color:rgba(255,255,255,.6)" onclick="pickColor('#ffffff')"></div>
+        <div class="ps" style="background:#111111" onclick="pickColor('#111111')"></div>
+      </div>
+      <div class="studio-tools">
+        <button id="tb-pen"  class="tb on" onclick="setTool('pen')">✏️</button>
+        <button id="tb-rect" class="tb" onclick="setTool('rect')">▭</button>
+        <button id="tb-circ" class="tb" onclick="setTool('circ')">⬤</button>
+        <button id="tb-poly" class="tb" onclick="setTool('poly')">⬡</button>
+        <button id="tb-era"  class="tb" onclick="setTool('era')">⬜</button>
+        <div class="sdiv"></div>
+        <button id="tb-fill" class="tb" onclick="toggleFill()" title="Fill shapes">▣</button>
+        <div class="sdiv"></div>
+        <button class="sz on" id="sz-s" onclick="setSz(2,this)">─</button>
+        <button class="sz" id="sz-m" onclick="setSz(5,this)" style="font-size:18px">─</button>
+        <button class="sz" id="sz-l" onclick="setSz(12,this)" style="font-size:26px">─</button>
+        <div style="flex:1"></div>
+        <button class="tb" onclick="undoDraw()" title="Undo">↩</button>
+        <button class="tb" onclick="clearCanvas()" title="Clear">🗑</button>
+      </div>
+      <div id="poly-tip" class="poly-tip" style="display:none">Tap to add points · Double-tap to close</div>
+    </div>
+  </div>
+
 </body>
-</html>
