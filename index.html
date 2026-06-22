@@ -1289,7 +1289,7 @@
 
     function attachMsgListener(chId, type) {
       const path = type==='group' ? '/channels/group/messages' : `/channels/dm/${chId}/messages`;
-      const ref = fbDb.ref(path).limitToLast(MAX_MSGS);
+      const ref = fbDb.ref(path).orderByChild('ts').limitToLast(MAX_MSGS);
       const fn = ref.on('value', snap => {
         if (currentCh?.id !== chId) return;
         const data = snap.val()||{};
