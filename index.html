@@ -280,7 +280,7 @@
     .msg-grp.other { align-items: flex-start; }
 
     .sndr-name { font-size: 11.5px; color: var(--tx-secondary); margin-bottom: 3px; padding-left: 2px; }
-    .msg-ts { font-size: 11px; color: var(--tx-muted); margin-bottom: 3px; align-self: center; }
+    .msg-ts { font-size: 11px; color: var(--tx-muted); margin-top: 2px; margin-bottom: 4px; }
 
     /* Bubbles — "tail-less tail" via corner radius difference */
     .bub {
@@ -1351,16 +1351,15 @@
         const own   = msg.senderId===me.id;
         const sndr  = members[msg.senderId]||{name:'?',emoji:'❓',color:'#3b82f6'};
         const showAv = !own && msg.senderId!==lastSender;
-        const showTs = !lastTs || (msg.ts-lastTs)>30*60*1000;
         const next   = currentMsgs[i+1];
         const isLast = !next || next.senderId!==msg.senderId;
+        const showTs = !lastTs || (msg.ts-lastTs)>10*60*1000 || isLast;
         const rxHtml = buildRxns(msg.reactions||{}, msg.id);
         const col    = own ? (me.color||sndr.color) : null;
         const bubSt  = own ? `style="background:${col}"` : '';
         if (own) {
           h += `<div class="msg-row own">
             <div class="msg-grp own">
-              ${showTs ? `<div class="msg-ts">${fmtTime(msg.ts)}</div>` : ''}
               <div class="bub own${isLast?' last':''}" ${bubSt}
                    oncontextmenu="showPicker(event,'${msg.id}');return false"
                    ontouchstart="tStart(event,'${msg.id}')" ontouchend="tEnd()"
@@ -1368,6 +1367,7 @@
                 ${msgContentHtml(msg)}
               </div>
               ${rxHtml}
+              ${showTs ? `<div class="msg-ts" style="align-self:flex-end">${fmtTime(msg.ts)}</div>` : ''}
             </div>
           </div>`;
         } else {
@@ -1375,7 +1375,6 @@
             ${showAv ? avHtml(sndr.emoji,sndr.color,'bub') : '<div class="av-spacer"></div>'}
             <div class="msg-grp other">
               ${showAv ? `<div class="sndr-name">${esc(sndr.name)}</div>` : ''}
-              ${showTs ? `<div class="msg-ts">${fmtTime(msg.ts)}</div>` : ''}
               <div class="bub other${isLast?' last':''}"
                    oncontextmenu="showPicker(event,'${msg.id}');return false"
                    ontouchstart="tStart(event,'${msg.id}')" ontouchend="tEnd()"
@@ -1383,6 +1382,7 @@
                 ${msgContentHtml(msg)}
               </div>
               ${rxHtml}
+              ${showTs ? `<div class="msg-ts" style="align-self:flex-start">${fmtTime(msg.ts)}</div>` : ''}
             </div>
           </div>`;
         }
