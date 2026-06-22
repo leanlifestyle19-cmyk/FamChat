@@ -857,6 +857,11 @@
     // Unlock AudioContext on first touch so received pings also play
     document.addEventListener('pointerdown', () => { getAudioCtx(); }, { once: true, passive: true });
 
+    // Refresh badge when app returns to foreground
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') updateBadge();
+    });
+
     // ── Ping ──────────────────────────────────────────────────────
     async function doPing() {
       const fab = document.querySelector('.ping-fab');
@@ -1235,6 +1240,14 @@
       });
 
       el.innerHTML = h;
+      updateBadge();
+    }
+
+    function updateBadge() {
+      if (!('setAppBadge' in navigator)) return;
+      const total = Object.values(unread).reduce((s,v) => s + (v||0), 0);
+      if (total > 0) navigator.setAppBadge(total).catch(()=>{});
+      else           navigator.clearAppBadge().catch(()=>{});
     }
 
     function previewStr(last) {
