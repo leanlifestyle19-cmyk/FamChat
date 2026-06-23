@@ -2069,14 +2069,30 @@
       if (!el||!me) return;
       el.innerHTML = Object.entries(members).map(([id,m]) => {
         const isSelf = id===me.id;
-        return `<div class="member-row">
-          ${avHtml(m.emoji, m.color, 'sm')}
-          <div>
-            <div class="member-name">${esc(m.name)}${isSelf?' <span class="you-tag">(you)</span>':''}</div>
-            <div class="member-last">last seen ${m.lastSeen?fmtTime(m.lastSeen):'unknown'}</div>
+        return `<div class="member-row" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0">
+            ${avHtml(m.emoji, m.color, 'sm')}
+            <div>
+              <div class="member-name">${esc(m.name)}${isSelf?' <span class="you-tag">(you)</span>':''}</div>
+              <div class="member-last">last seen ${m.lastSeen?fmtTime(m.lastSeen):'unknown'}</div>
+            </div>
           </div>
+          ${!isSelf ? `<button onclick="removeMember('${id}','${esc(m.name)}')"
+            style="flex-shrink:0;background:transparent;border:1px solid var(--border);color:var(--tx-muted);
+                   border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">Remove</button>` : ''}
         </div>`;
       }).join('');
+    }
+
+    async function removeMember(uid, name) {
+      if (!confirm(`Remove "${name}" from FamChat?\n\nTheir profile will be deleted. Messages they sent will remain.`)) return;
+      try {
+        await fbDb.ref(`/members/${uid}`).remove();
+        delete members[uid];
+        showToast(`"${name}" removed`);
+        renderSettingsMembers();
+        renderHomeList();
+      } catch(e) { showToast('Could not remove — check connection'); }
     }
 
     // ══════════════════════════════════════════════════════════════════
