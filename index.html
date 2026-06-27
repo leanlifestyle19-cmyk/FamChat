@@ -611,12 +611,15 @@
   <div id="s-home" class="screen">
     <header class="app-hdr">
       <span class="app-hdr-title">FamChat</span>
-      <button id="home-gear" class="icon-btn" title="Settings">
+      <div style="display:flex;align-items:center;gap:4px">
+        <button id="home-plus" class="icon-btn" title="New group" onclick="openCreateGroup()" style="font-size:22px;font-weight:300;padding:0 6px">+</button>
+        <button id="home-gear" class="icon-btn" title="Settings">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
         </svg>
       </button>
+      </div>
     </header>
     <div id="quote-card" class="quote-card">
       <div class="quote-card-emoji">🌟</div>
@@ -1186,6 +1189,7 @@
     // ══════════════════════════════════════════════════════════════════
     let db = null, fbDb = null, me = null;
     let members = {};
+    let groups = {};            // {gid: {id,name,emoji,color,members:{},createdBy,ts}}
     let currentCh = null;   // {type, id, memberId}
     let currentMsgs = [];
     let lastMsgs = {};      // {channelId: {text, senderId, ts}}
@@ -1196,6 +1200,7 @@
     let chatMsgOff = null, chatTypOff = null;
     let scrolledUp = false;
     let dmLsns = {};        // {dmId: offFn}
+    let grpLsns = {};       // {gid: offFn}  custom groups
     let grpLsnActive = false;
 
     // ══════════════════════════════════════════════════════════════════
@@ -1394,6 +1399,100 @@
       };
     }
 
+    // ── Channel path helper ───────────────────────────────────────
+    function chPaths(type, chId) {
+      const base = type==='group' ? '/channels/group'
+                 : type==='grp'   ? `/channels/${chId}`
+                 : `/channels/dm/${chId}`;
+      return { msgs:`${base}/messages`, last:`${base}/lastMsg`, typing:`/typing/${chId}` };
+    }
+
+    // ── Custom groups ─────────────────────────────────────────────
+    function listenGroups() {
+      fbDb.ref('/groups').on('value', snap => {
+        const data = snap.val() || {};
+        groups = {};
+        Object.entries(data).forEach(([gid, g]) => {
+          if (g && g.members && g.members[me.id]) groups[gid] = { ...g, id: gid };
+        });
+        setupGrpListeners();
+        renderHomeList();
+      });
+    }
+
+    function setupGrpListeners() {
+      Object.keys(grpLsns).forEach(gid => {
+        if (!groups[gid]) { grpLsns[gid](); delete grpLsns[gid]; }
+      });
+      Object.keys(groups).forEach(gid => {
+        if (grpLsns[gid]) return;
+        const ref = fbDb.ref(chPaths('grp', gid).last);
+        const handler = snap => {
+          const v = snap.val(); if (!v) return;
+          const prev = knownTs[gid] || 0;
+          if (prev > 0 && v.ts > prev && v.senderId !== me.id && (!currentCh || currentCh.id !== gid))
+            unread[gid] = (unread[gid] || 0) + 1;
+          knownTs[gid] = v.ts;
+          lastMsgs[gid] = v;
+          renderHomeList();
+        };
+        ref.on('value', handler);
+        grpLsns[gid] = () => ref.off('value', handler);
+      });
+    }
+
+    function openCreateGroup() {
+      const modal = document.getElementById('grp-modal');
+      if (!modal) return;
+      document.getElementById('grp-name-in').value = '';
+      const pick = document.getElementById('grp-member-pick');
+      const others = Object.entries(members).filter(([id]) => id !== me.id);
+      if (!others.length) { showToast('No other members to add yet'); return; }
+      pick.innerHTML = others.map(([id, m]) => `
+        <div class="grp-mem-item" data-uid="${id}" onclick="toggleGrpMem(this)">
+          ${avHtml(m.emoji, m.color, 'sm')}
+          <div style="font-size:11px;color:var(--tx-secondary);text-align:center;max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.name)}</div>
+          <div class="grp-mem-ck">✓</div>
+        </div>`).join('');
+      if (!document.getElementById('grp-pick-css')) {
+        const s = document.createElement('style'); s.id = 'grp-pick-css';
+        s.textContent = `.grp-mem-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;opacity:.45;transition:opacity .15s;position:relative}
+          .grp-mem-item.sel{opacity:1}
+          .grp-mem-ck{position:absolute;top:-2px;right:-2px;width:18px;height:18px;border-radius:50%;background:#22c55e;color:#fff;font-size:11px;display:none;align-items:center;justify-content:center;border:2px solid var(--surface)}
+          .grp-mem-item.sel .grp-mem-ck{display:flex}`;
+        document.head.appendChild(s);
+      }
+      modal.style.display = 'flex';
+      setTimeout(() => document.getElementById('grp-name-in').focus(), 80);
+    }
+
+    function closeCreateGroup() {
+      const m = document.getElementById('grp-modal'); if (m) m.style.display = 'none';
+    }
+
+    function toggleGrpMem(el) { el.classList.toggle('sel'); }
+
+    async function doCreateGroup() {
+      const name = (document.getElementById('grp-name-in').value||'').trim().slice(0,30);
+      if (!name) { showToast('Enter a group name'); return; }
+      const selected = [...document.querySelectorAll('#grp-member-pick .grp-mem-item.sel')].map(el=>el.dataset.uid);
+      if (!selected.length) { showToast('Select at least one member'); return; }
+      const btn = document.getElementById('grp-create-btn');
+      btn.disabled=true; btn.textContent='Creating…';
+      try {
+        const gid = uuid();
+        const memberMap = { [me.id]: true };
+        selected.forEach(uid => { memberMap[uid] = true; });
+        const COLORS = ['#3b82f6','#22c55e','#f97316','#a855f7','#ec4899','#14b8a6'];
+        const color = COLORS[Math.floor(Math.random()*COLORS.length)];
+        await fbDb.ref(`/groups/${gid}`).set({ id:gid, name, emoji:'👥', color, members:memberMap, createdBy:me.id, ts:Date.now() });
+        closeCreateGroup();
+        showToast(`"${name}" created!`);
+        setTimeout(() => openChat('grp', null, gid), 400);
+      } catch(e) { showToast('Could not create group'); }
+      finally { btn.disabled=false; btn.textContent='Create Group'; }
+    }
+
     // ══════════════════════════════════════════════════════════════════
     // APP ENTRY
     // ══════════════════════════════════════════════════════════════════
@@ -1403,6 +1502,7 @@
       fbDb.ref(`/members/${me.id}/lastSeen`).set(Date.now()).catch(()=>{});
       setupConnectivity();
       listenMembers();
+      listenGroups();
       listenPings();
       initHomeScreen();
     }
@@ -1507,6 +1607,28 @@
           </div>
         </div>`;
 
+      // Custom groups (sorted by last message time)
+      Object.values(groups)
+        .sort((a,b) => (lastMsgs[b.id]?.ts||b.ts||0) - (lastMsgs[a.id]?.ts||a.ts||0))
+        .forEach(g => {
+          const last = lastMsgs[g.id], ur = unread[g.id]||0;
+          const mCnt = Object.keys(g.members||{}).length;
+          h += `
+          <div class="chat-row" onclick="openChat('grp',null,'${g.id}')">
+            <div style="width:46px;height:46px;border-radius:50%;background:${g.color};display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">${g.emoji||'👥'}</div>
+            <div class="row-content">
+              <div class="row-top">
+                <span class="row-name">${esc(g.name)}</span>
+                <span class="row-meta">${last?fmtTime(last.ts):''}</span>
+              </div>
+              <div class="row-bot">
+                <span class="row-prev">${last?previewStr(last):`<span style="color:var(--tx-muted)">${mCnt} members</span>`}</span>
+                ${ur>0?`<span class="badge">${ur>99?'99+':ur}</span>`:''}
+              </div>
+            </div>
+          </div>`;
+        });
+
       others.forEach(([mid,m]) => {
         const dId = mkDmId(me.id,mid), last = lastMsgs[dId], ur = unread[dId]||0;
         h += `
@@ -1545,8 +1667,8 @@
     // ══════════════════════════════════════════════════════════════════
     // SCREEN 4 — CHAT
     // ══════════════════════════════════════════════════════════════════
-    function openChat(type, memberId) {
-      const chId = type==='group' ? 'group' : mkDmId(me.id, memberId);
+    function openChat(type, memberId, gid) {
+      const chId = type==='group' ? 'group' : type==='grp' ? gid : mkDmId(me.id, memberId);
       currentCh = {type, id:chId, memberId};
       unread[chId] = 0;
       currentMsgs = [];
@@ -1587,7 +1709,7 @@
     }
 
     function attachMsgListener(chId, type) {
-      const path = type==='group' ? '/channels/group/messages' : `/channels/dm/${chId}/messages`;
+      const path = chPaths(type, chId).msgs;
       const ref = fbDb.ref(path).orderByChild('ts').limitToLast(MAX_MSGS);
       const fn = ref.on('value', snap => {
         if (currentCh?.id !== chId) return;
@@ -1619,6 +1741,15 @@
           <div class="av grp" style="width:36px;height:36px;font-size:20px">👨‍👩‍👧</div>
           <div>
             <div class="chat-hdr-name">Family</div>
+            <div class="chat-hdr-sub">${cnt} member${cnt!==1?'s':''}</div>
+          </div>`;
+      } else if (currentCh.type==='grp') {
+        const g = groups[currentCh.id] || { name:'Group', emoji:'👥', color:'#3b82f6', members:{} };
+        const cnt = Object.keys(g.members||{}).length;
+        el.innerHTML = `
+          <div style="width:36px;height:36px;border-radius:50%;background:${g.color};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${g.emoji}</div>
+          <div>
+            <div class="chat-hdr-name">${esc(g.name)}</div>
             <div class="chat-hdr-sub">${cnt} member${cnt!==1?'s':''}</div>
           </div>`;
       } else {
@@ -1750,8 +1881,8 @@
       clearTimeout(typingTimer);
       fbDb.ref(`/typing/${currentCh.id}/${me.id}`).set({active:false,ts:Date.now()}).catch(()=>{});
       const id=uuid(), ts=Date.now();
-      const mPath = currentCh.type==='group' ? `/channels/group/messages/${id}` : `/channels/dm/${currentCh.id}/messages/${id}`;
-      const lPath = currentCh.type==='group' ? '/channels/group/lastMsg' : `/channels/dm/${currentCh.id}/lastMsg`;
+      const { msgs: mBase, last: lPath } = chPaths(currentCh.type, currentCh.id);
+      const mPath = `${mBase}/${id}`;
       try {
         await fbDb.ref(mPath).set({senderId:me.id, text, ts, reactions:{}});
         await fbDb.ref(lPath).set({text, senderId:me.id, ts});
@@ -1823,12 +1954,8 @@
           r.readAsDataURL(blob);
         });
         const id    = uuid();
-        const mPath = currentCh.type==='group'
-          ? `/channels/group/messages/${id}`
-          : `/channels/dm/${currentCh.id}/messages/${id}`;
-        const lPath = currentCh.type==='group'
-          ? '/channels/group/lastMsg'
-          : `/channels/dm/${currentCh.id}/lastMsg`;
+        const { msgs: mBase2, last: lPath } = chPaths(currentCh.type, currentCh.id);
+        const mPath = `${mBase2}/${id}`;
         await fbDb.ref(mPath).set({
           id, senderId:me.id, type:'voice',
           audioData:base64, mimeType:blob.type||'audio/webm',
@@ -1956,9 +2083,7 @@
 
     async function doRxn(msgId,emoji) {
       if (!currentCh) return;
-      const path = currentCh.type==='group'
-        ? `/channels/group/messages/${msgId}/reactions/${me.id}`
-        : `/channels/dm/${currentCh.id}/messages/${msgId}/reactions/${me.id}`;
+      const path = `${chPaths(currentCh.type,currentCh.id).msgs}/${msgId}/reactions/${me.id}`;
       const msg = currentMsgs.find(m=>m.id===msgId);
       if (msg?.reactions?.[me.id]===emoji) await fbDb.ref(path).remove();
       else await fbDb.ref(path).set(emoji);
@@ -1969,9 +2094,12 @@
       if (document.visibilityState==='visible') return;
       if (Notification.permission!=='granted') return;
       const sndr = members[msg.senderId]||{name:'Someone'};
-      const title = currentCh?.type==='group' ? `Family · ${sndr.name}` : sndr.name;
-      const n = new Notification(title,{body:msg.text.slice(0,80), icon:'./icon-192.png'});
-      n.onclick=()=>{ window.focus(); };
+      const grpName = currentCh?.type==='grp' ? (groups[currentCh.id]?.name||'Group') : 'Family';
+      const title = (currentCh?.type==='group'||currentCh?.type==='grp') ? `${grpName} · ${sndr.name}` : sndr.name;
+      const body  = msg.type==='voice' ? '🎤 Voice message' : (msg.text||'').slice(0,80);
+      const n = new Notification(title, { body, icon:'./icon-192.png' });
+      n.onclick = () => { window.focus(); };
+      updateBadge();
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -2168,6 +2296,24 @@
         <button class="tb" onclick="clearCanvas()" title="Clear">🗑</button>
       </div>
       <div id="poly-tip" class="poly-tip" style="display:none">Tap to add points · Double-tap to close</div>
+    </div>
+  </div>
+
+  <!-- Create Group Modal -->
+  <div id="grp-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:flex-end;">
+    <div style="width:100%;background:var(--surface);border-radius:20px 20px 0 0;padding:20px 18px 32px;max-height:80vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:17px;font-weight:600;color:var(--tx-primary)">New Group</span>
+        <button onclick="closeCreateGroup()" style="background:transparent;border:none;font-size:22px;color:var(--tx-muted);cursor:pointer">✕</button>
+      </div>
+      <input id="grp-name-in" type="text" maxlength="30" placeholder="Group name…"
+        style="width:100%;background:var(--input-bg);border:1.5px solid var(--input-border);color:var(--tx-primary);border-radius:12px;padding:10px 14px;font-size:15px;outline:none">
+      <div style="font-size:12px;font-weight:600;color:var(--tx-muted);letter-spacing:.05em;text-transform:uppercase">Add Members</div>
+      <div id="grp-member-pick" style="display:flex;flex-wrap:wrap;gap:12px;"></div>
+      <button id="grp-create-btn" onclick="doCreateGroup()"
+        style="width:100%;padding:13px;border-radius:12px;background:#3b82f6;color:#fff;border:none;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px">
+        Create Group
+      </button>
     </div>
   </div>
 
