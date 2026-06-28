@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="hearth-ui">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -13,23 +13,25 @@
        DESIGN TOKENS
     ================================================================ */
     :root {
-      /* Ocean theme — default (light) */
-      --bg:              #dff4fb;
-      --surface:         #f0faff;
-      --surface-raised:  #ffffff;
-      --border:          #b3e0f5;
-      --bubble-other:    #e0f2fe;
-      --bubble-other-tx: #0c3d5a;
-      --input-bg:        #f0faff;
-      --input-border:    #7dd3fa;
-      --compose-bg:      #dff4fb;
-      --tx-primary:      #0c3d5a;
-      --tx-secondary:    #0369a1;
-      --tx-muted:        #0891b2;
+      /* Hearth theme — default (light) */
+      --bg:              #fbf4ec;
+      --accent:          #ef7259;
+      --accent-grad:     linear-gradient(135deg, #ef7259 0%, #2a9d8f 100%);
+      --surface:         #ffffff;
+      --surface-raised:  #fff9f3;
+      --border:          #f0e6dc;
+      --bubble-other:    #ffffff;
+      --bubble-other-tx: #3b2d28;
+      --input-bg:        #ffffff;
+      --input-border:    #e7d8c8;
+      --compose-bg:      #fbf4ec;
+      --tx-primary:      #3b2d28;
+      --tx-secondary:    #8c6a5c;
+      --tx-muted:        #a8968b;
       --online:          #16a34a;
       --unread-bg:       #ef4444;
-      --rx-bg:           rgba(0,0,0,0.06);
-      --rx-own-bg:       rgba(0,0,0,0.13);
+      --rx-bg:           rgba(0,0,0,0.05);
+      --rx-own-bg:       rgba(0,0,0,0.12);
       --rx-border:       rgba(0,0,0,0.10);
       --safe-b:          env(safe-area-inset-bottom, 0px);
     }
@@ -68,7 +70,7 @@
        SHARED COMPONENTS
     ================================================================ */
     .btn-primary {
-      background: #3b82f6; color: #fff; border: none; border-radius: 12px;
+      background: var(--accent); color: #fff; border: none; border-radius: 12px;
       padding: 14px 20px; font-size: 15px; font-weight: 600; font-family: inherit;
       cursor: pointer; width: 100%; transition: opacity .18s, transform .1s;
     }
@@ -81,7 +83,7 @@
       padding: 12px 14px; color: var(--tx-primary); font-size: 15px; font-family: inherit;
       outline: none; width: 100%; transition: border-color .18s;
     }
-    .text-input:focus { border-color: #3b82f6; }
+    .text-input:focus { border-color: var(--accent); }
 
     .form-label {
       display: block; font-size: 12px; font-weight: 600; letter-spacing: .4px;
@@ -118,7 +120,7 @@
     }
     .emoji-cell:hover { background: var(--surface-raised); }
     .emoji-cell:active { transform: scale(.88); }
-    .emoji-cell.sel { border-color: #3b82f6; background: rgba(59,130,246,.14); }
+    .emoji-cell.sel { border-color: var(--accent); background: rgba(59,130,246,.14); }
 
     .color-row { display: flex; gap: 12px; flex-wrap: wrap; }
     .color-dot {
@@ -138,7 +140,7 @@
     .app-logo { text-align: center; padding-bottom: 4px; }
     .app-icon-shell {
       width: 80px; height: 80px; border-radius: 22px; margin: 0 auto 14px;
-      background: linear-gradient(135deg, #3b82f6 0%, #14b8a6 100%);
+      background: var(--accent-grad);
       display: flex; align-items: center; justify-content: center; font-size: 38px;
     }
     .app-name { font-size: 30px; font-weight: 700; letter-spacing: -.5px; }
@@ -151,12 +153,12 @@
       font-family: 'Courier New', Courier, monospace; font-size: 12px;
       resize: vertical; outline: none; transition: border-color .18s; line-height: 1.6;
     }
-    .setup-ta:focus { border-color: #3b82f6; }
+    .setup-ta:focus { border-color: var(--accent); }
     .setup-ta::placeholder { color: var(--tx-muted); }
 
     .err-msg { color: #f87171; font-size: 13px; min-height: 16px; text-align: center; }
     .readme-link {
-      color: #3b82f6; font-size: 13px; text-align: center; text-decoration: none; cursor: pointer;
+      color: var(--accent); font-size: 13px; text-align: center; text-decoration: none; cursor: pointer;
     }
     .readme-link:hover { text-decoration: underline; }
 
@@ -238,7 +240,7 @@
       color: #fff; border-radius: 8px; padding: 6px 10px; font-size: 14px; outline: none;
     }
     .studio-save-btn {
-      background: #3b82f6; color: #fff; border: none; border-radius: 8px;
+      background: var(--accent); color: #fff; border: none; border-radius: 8px;
       padding: 7px 16px; font-size: 14px; font-weight: 600; cursor: pointer; flex-shrink: 0;
     }
     #draw-canvas { flex: 1; display: block; touch-action: none; cursor: crosshair; width: 100%; }
@@ -266,7 +268,7 @@
       display: flex; align-items: center; justify-content: center; transition: background .1s;
       flex-shrink: 0;
     }
-    .tb.on { background: #3b82f6; border-color: #3b82f6; }
+    .tb.on { background: var(--accent); border-color: var(--accent); }
     .tb:active { transform: scale(.88); }
     .sdiv { width: 1px; height: 28px; background: rgba(255,255,255,.15); margin: 0 2px; flex-shrink: 0; }
     .sz { width: 30px; height: 30px; border-radius: 6px; background: rgba(255,255,255,.08);
@@ -283,7 +285,7 @@
     .bg-thumb { width: 54px; height: 36px; object-fit: cover; border-radius: 5px; flex-shrink: 0; }
     .bg-thumb-name { flex: 1; font-size: 13px; color: var(--tx-primary); min-width: 0;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .btn-apply { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: #3b82f6;
+    .btn-apply { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: var(--accent);
       color: #fff; border: none; cursor: pointer; flex-shrink: 0; }
     .btn-del { font-size: 12px; padding: 4px 8px; border-radius: 6px; background: transparent;
       color: var(--tx-muted); border: 1px solid var(--border); cursor: pointer; flex-shrink: 0; }
@@ -402,7 +404,7 @@
     .compose-ta::placeholder { color: var(--tx-muted); }
     .compose-ta:disabled { opacity: .45; }
     .send-btn {
-      width: 36px; height: 36px; border-radius: 50%; background: #3b82f6;
+      width: 36px; height: 36px; border-radius: 50%; background: var(--accent);
       border: none; cursor: pointer; color: #fff;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
       transition: transform .1s, opacity .16s;
@@ -469,7 +471,7 @@
     /* New message chip */
     .new-chip {
       display: none; position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
-      background: #3b82f6; color: #fff; padding: 7px 16px; border-radius: 20px;
+      background: var(--accent); color: #fff; padding: 7px 16px; border-radius: 20px;
       font-size: 13px; font-weight: 600; cursor: pointer; z-index: 10;
       box-shadow: 0 4px 18px rgba(0,0,0,.45); white-space: nowrap;
     }
@@ -556,6 +558,58 @@
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
     }
+
+    /* ================================================================
+       HEARTH LAYOUT PORT  —  active ONLY when the Hearth theme is on.
+       (html.hearth-ui is toggled in applyTheme.) Other themes untouched.
+    ================================================================ */
+    html.hearth-ui .app-hdr,
+    html.hearth-ui .chat-hdr,
+    html.hearth-ui .settings-hdr {
+      background: var(--accent); border-bottom: none; color: #fff;
+      padding-top: calc(14px + env(safe-area-inset-top, 0px));
+    }
+    html.hearth-ui .app-hdr-title,
+    html.hearth-ui .settings-title,
+    html.hearth-ui .chat-hdr-name { color: #fff; }
+    html.hearth-ui .app-hdr-title::before { content: "\1F90D  "; }
+    html.hearth-ui .chat-hdr-sub { color: rgba(255,255,255,.85); }
+    html.hearth-ui .chat-hdr-sub .online-dot { background: #fff; }
+    html.hearth-ui .app-hdr .icon-btn,
+    html.hearth-ui .chat-hdr .icon-btn,
+    html.hearth-ui .settings-hdr .icon-btn { color: #fff; }
+
+    /* chat list rows */
+    html.hearth-ui .home-list { background: var(--bg); }
+    html.hearth-ui .chat-row { border-bottom: 1px solid var(--border); padding: 12px 16px; gap: 13px; }
+    html.hearth-ui .chat-row:hover,
+    html.hearth-ui .chat-row:active { background: var(--surface-raised); }
+    html.hearth-ui .row-name { font-size: 15.5px; }
+    html.hearth-ui .badge { background: var(--accent); }
+
+    /* quote card */
+    html.hearth-ui .quote-card { border-left: 3px solid var(--accent); }
+
+    /* message bubbles */
+    html.hearth-ui .messages { padding: 14px 12px 8px; gap: 3px; }
+    html.hearth-ui .bub { border-radius: 16px; font-size: 14.5px; line-height: 1.45; }
+    html.hearth-ui .bub.other {
+      background: var(--surface-raised); color: var(--bubble-other-tx);
+      border: 1px solid var(--border); box-shadow: 0 1px 1.5px rgba(0,0,0,.05);
+    }
+    html.hearth-ui .bub.other.last { border-bottom-left-radius: 5px; }
+    html.hearth-ui .bub.own.last { border-bottom-right-radius: 5px; }
+    html.hearth-ui .sndr-name { color: var(--accent); font-weight: 600; }
+
+    /* composer */
+    html.hearth-ui .compose-area { background: var(--bg); border-top: 1px solid var(--border); }
+    html.hearth-ui .compose-bar { background: var(--surface-raised); border-color: var(--border); }
+    html.hearth-ui .mic-btn { background: var(--accent); color: #fff; width: 38px; height: 38px; }
+    html.hearth-ui .rec-send { background: var(--accent); }
+
+    /* settings */
+    html.hearth-ui .settings-body { background: var(--bg); }
+
   </style>
 </head>
 <body>
@@ -760,7 +814,23 @@
       galaxy: { label:'🌌 Galaxy', bg:'#070412', surface:'#0f0922', raised:'#180d36', border:'#2c1a68', txSec:'#8878d0', txMuted:'#3c2898', inputBorder:'#3e2a90' },
       forest: { label:'🌲 Forest', bg:'#030d06', surface:'#07190c', raised:'#0c2a14', border:'#164e20', txSec:'#52a868', txMuted:'#1e6830', inputBorder:'#1e6830' },
       candy:  { label:'🍭 Candy',  bg:'#110310', surface:'#1f061e', raised:'#2e092c', border:'#541848', txSec:'#c858b8', txMuted:'#7a2070', inputBorder:'#881e7a' },
+      hearth: {
+        label:'🪔 Hearth',
+        bg:'#fbf4ec', surface:'#ffffff', raised:'#fff9f3', border:'#f0e6dc',
+        txPrimary:'#3b2d28', txSec:'#8c6a5c', txMuted:'#a8968b',
+        inputBorder:'#e7d8c8', bubbleOther:'#ffffff', bubbleOtherTx:'#3b2d28',
+        rxBg:'rgba(0,0,0,0.05)', rxOwnBg:'rgba(0,0,0,0.12)',
+        accent:'#ef7259', accentGrad:'linear-gradient(135deg, #ef7259 0%, #2a9d8f 100%)',
+        light:false,
+      },
     };
+
+    // One-time: adopt Hearth as the default for existing installs too.
+    // (Delete these 3 lines to default Hearth for NEW installs only.)
+    if (!localStorage.getItem('fc_default_hearth_v1')) {
+      localStorage.setItem('fc_theme', 'hearth');
+      localStorage.setItem('fc_default_hearth_v1', '1');
+    }
 
     const QUOTES = [
       { q:"Family is not an important thing — it's everything.", a:"Michael J. Fox" },
@@ -846,7 +916,7 @@
     const WAVE_URI = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 220' preserveAspectRatio='none'%3E%3Cpath fill='%2338bdf8' fill-opacity='0.45' d='M0,90 C180,50 360,120 540,85 C720,50 900,120 1080,85 C1260,50 1350,95 1440,85 L1440,220 L0,220Z'/%3E%3Cpath fill='%230ea5e9' fill-opacity='0.32' d='M0,120 C180,155 360,95 540,130 C720,165 900,105 1080,130 C1260,155 1350,120 1440,130 L1440,220 L0,220Z'/%3E%3Cpath fill='%230284c7' fill-opacity='0.22' d='M0,155 C180,135 360,165 540,150 C720,135 900,165 1080,150 C1260,135 1350,158 1440,150 L1440,220 L0,220Z'/%3E%3C/svg%3E";
 
     function applyTheme(name) {
-      const t = THEMES[name] || THEMES.ocean;
+      const t = THEMES[name] || THEMES.hearth;
       const r = document.documentElement.style;
       r.setProperty('--bg',              t.bg);
       r.setProperty('--surface',         t.surface);
@@ -862,11 +932,14 @@
       r.setProperty('--tx-muted',        t.txMuted);
       r.setProperty('--rx-bg',           t.rxBg    || 'rgba(255,255,255,0.07)');
       r.setProperty('--rx-own-bg',       t.rxOwnBg || 'rgba(255,255,255,0.18)');
+      r.setProperty('--accent',          t.accent || '#3b82f6');
+      r.setProperty('--accent-grad',     t.accentGrad || 'linear-gradient(135deg, #3b82f6 0%, #14b8a6 100%)');
       r.setProperty('--bg-wave',         t.light ? `url("${WAVE_URI}")` : 'none');
       r.setProperty('--bg-wave-size',    '100% 38%');
       const mc = document.querySelector('meta[name="theme-color"]');
       if (mc) mc.content = t.bg;
       localStorage.setItem('fc_theme', name);
+      document.documentElement.classList.toggle('hearth-ui', name === 'hearth');
     }
 
     // ── Quote card ────────────────────────────────────────────────
@@ -1100,7 +1173,7 @@
       localStorage.removeItem('fc_active_bg');
       const r=document.documentElement.style;
       r.setProperty('--bg-wave-size','100% 38%');
-      applyTheme(localStorage.getItem('fc_theme')||'ocean');
+      applyTheme(localStorage.getItem('fc_theme')||'hearth');
       showToast('Custom background removed');
     }
 
@@ -1497,7 +1570,7 @@
     // APP ENTRY
     // ══════════════════════════════════════════════════════════════════
     async function enterApp() {
-      applyTheme(localStorage.getItem('fc_theme') || 'ocean');
+      applyTheme(localStorage.getItem('fc_theme') || 'hearth');
       try { const c = await idbAll('members'); c.forEach(m => { members[m.id] = m; }); } catch(e){}
       fbDb.ref(`/members/${me.id}/lastSeen`).set(Date.now()).catch(()=>{});
       setupConnectivity();
@@ -2112,7 +2185,7 @@
 
       // Theme picker
       const themeRow = document.getElementById('s-themes');
-      const curTheme = localStorage.getItem('fc_theme') || 'ocean';
+      const curTheme = localStorage.getItem('fc_theme') || 'hearth';
       themeRow.innerHTML = Object.entries(THEMES).map(([key, t]) => {
         const active = key === curTheme ? 'active' : '';
         // Gradient dot showing the theme's surface→raised colors
@@ -2227,7 +2300,7 @@
     // INIT
     // ══════════════════════════════════════════════════════════════════
     async function init() {
-      applyTheme(localStorage.getItem('fc_theme') || 'ocean');
+      applyTheme(localStorage.getItem('fc_theme') || 'hearth');
       const _cbg = localStorage.getItem('fc_active_bg');
       if (_cbg) applyCustomBg(_cbg);
       try { await openDb(); pruneOld(); } catch(e) { console.warn('IDB open failed:', e); }
