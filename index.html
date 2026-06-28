@@ -793,6 +793,7 @@
         <div class="sec-label">Appearance</div>
         <div id="s-themes" class="theme-row"></div>
         <div class="sec-label" style="margin-top:14px">Background Studio</div>
+        <button id="s-mute" class="btn-ghost" onclick="toggleMute()">🔔 Sounds &amp; vibration on</button>
         <button id="s-open-studio" class="btn-ghost">🎨 Open Drawing Studio</button>
         <div id="s-bg-gallery" class="bg-gallery"></div>
         <button id="s-rm-bg" class="btn-ghost" style="display:none;margin-top:4px">Remove custom background</button>
@@ -1231,6 +1232,7 @@
 
     // Two-note ascending chime: A5 (880Hz) → E6 (1318Hz)
     function playPingSound() {
+      if (isMuted()) return;
       const ctx = getAudioCtx(); if (!ctx) return;
       [[880, 0], [1318.5, 0.22]].forEach(([freq, delay]) => {
         const osc  = ctx.createOscillator();
@@ -1272,6 +1274,7 @@
         const v = snap.val();
         if (!v || v.senderId === me.id) return;
         playPingSound();
+        if (!isMuted() && navigator.vibrate) { try { navigator.vibrate([90,40,90]); } catch (e) {} }
         showToast(`${v.senderEmoji} ${v.senderName} is pinging the family! 📢`, 4000);
         if (document.visibilityState !== 'visible' && Notification.permission === 'granted') {
           const n = new Notification(`${v.senderName} is pinging!`, { body:'📢 Family ping received', icon:'./icon-192.png' });
@@ -1533,8 +1536,9 @@
         const handler = snap => {
           const v = snap.val(); if (!v) return;
           const prev = knownTs[gid] || 0;
-          if (prev > 0 && v.ts > prev && v.senderId !== me.id && (!currentCh || currentCh.id !== gid))
-            unread[gid] = (unread[gid] || 0) + 1;
+          if (prev > 0 && v.ts > prev && v.senderId !== me.id && (!currentCh || currentCh.id !== gid)) {
+            unread[gid] = (unread[gid] || 0) + 1; buzz();
+          }
           knownTs[gid] = v.ts;
           lastMsgs[gid] = v;
           renderHomeList();
@@ -1653,8 +1657,9 @@
         fbDb.ref('/channels/group/lastMsg').on('value', snap => {
           const v = snap.val(); if (!v) return;
           const prev = knownTs['group'] || 0;
-          if (prev > 0 && v.ts > prev && v.senderId !== me.id && (!currentCh || currentCh.id !== 'group'))
-            unread['group'] = (unread['group']||0) + 1;
+          if (prev > 0 && v.ts > prev && v.senderId !== me.id && (!currentCh || currentCh.id !== 'group')) {
+            unread['group'] = (unread['group']||0) + 1; buzz();
+          }
           knownTs['group'] = v.ts;
           lastMsgs['group'] = v;
           renderHomeList();
@@ -1675,8 +1680,9 @@
         const fn = ref.on('value', snap => {
           const v = snap.val(); if (!v) return;
           const prev = knownTs[dId] || 0;
-          if (prev > 0 && v.ts > prev && v.senderId !== me.id && (!currentCh || currentCh.id !== dId))
-            unread[dId] = (unread[dId]||0) + 1;
+          if (prev > 0 && v.ts > prev && v.senderId !== me.id && (!currentCh || currentCh.id !== dId)) {
+            unread[dId] = (unread[dId]||0) + 1; buzz();
+          }
           knownTs[dId] = v.ts;
           lastMsgs[dId] = v;
           renderHomeList();
@@ -1845,6 +1851,7 @@
           if (!scrolledUp) scrollToBottom(false);
           else if (newOthers.length>0) showChip(newOthers.length);
           newOthers.forEach(m => fireNotif(m, chId));
+          if (newOthers.length > 0) buzz();
         }
       });
       chatMsgOff = () => ref.off('value', fn);
@@ -2208,7 +2215,28 @@
     }
 
     // ── Notifications ──────────────────────────────────────────────
+    // ── Mute + vibration ─────────────────────────────────────────
+    function isMuted() { return localStorage.getItem('fc_muted') === '1'; }
+    let _lastBuzz = 0;
+    function buzz() {
+      if (isMuted() || !navigator.vibrate) return;
+      const now = Date.now();
+      if (now - _lastBuzz < 800) return;            // throttle rapid bursts
+      _lastBuzz = now;
+      try { navigator.vibrate(200); } catch (e) {}
+    }
+    function updateMuteBtn() {
+      const b = document.getElementById('s-mute');
+      if (b) b.textContent = isMuted() ? '🔕 Muted — tap to unmute' : '🔔 Sounds & vibration on';
+    }
+    function toggleMute() {
+      localStorage.setItem('fc_muted', isMuted() ? '0' : '1');
+      updateMuteBtn();
+      if (!isMuted() && navigator.vibrate) { try { navigator.vibrate(40); } catch (e) {} }
+    }
+
     function fireNotif(msg, chId) {
+      if (isMuted()) return;
       if (document.visibilityState==='visible') return;
       if (Notification.permission!=='granted') return;
       const sndr = members[msg.senderId]||{name:'Someone'};
@@ -2226,6 +2254,7 @@
     function initSettingsScreen() {
       const nameIn = document.getElementById('s-name');
       nameIn.value = me.name;
+      updateMuteBtn();
       let selEmoji=me.emoji, selColor=me.color;
 
       // Theme picker
