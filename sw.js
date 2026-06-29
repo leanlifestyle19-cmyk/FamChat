@@ -1,6 +1,6 @@
 // FamChat Service Worker
 // Cache version — bump this string to force cache refresh across all clients
-const CACHE = 'fc-v20';
+const CACHE = 'fc-v15';
 
 // Firebase CDN domains that must never be SW-cached (live data)
 const BYPASS = ['gstatic.com','firebaseio.com','googleapis.com','firebaseapp.com'];
